@@ -201,7 +201,7 @@ export function ParametricEditor() {
       <PanelGroup
         direction="horizontal"
         className="h-full w-full"
-        autoSaveId="editor-panels"
+        autoSaveId={hasArtifact ? 'editor-panels-3' : 'editor-panels-2'}
       >
         <Panel
           collapsible

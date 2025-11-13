@@ -36,6 +36,11 @@ export default defineConfig({
     open: false,
   },
   optimizeDeps: {
-    exclude: ['@zip.js/zip.js', 'three', 'three-stdlib'],
+    exclude: [
+      '@zip.js/zip.js',
+      'three',
+      'three-stdlib',
+      'react-resizable-panels',
+    ],
   },
 });

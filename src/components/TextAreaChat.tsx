@@ -57,6 +57,10 @@ function TextAreaChat({
   const { toast } = useToast();
   const { images, setImages } = useItemSelection();
 
+  // Check if current model supports thinking
+  const selectedModelConfig = PARAMETRIC_MODELS.find((m) => m.id === model);
+  const supportsThinking = selectedModelConfig?.supportsThinking ?? false;
+
   // Refs for the two hot-zones
   const topDropZoneRef = useRef<HTMLDivElement>(null);
   const textAreaContainerZoneRef = useRef<HTMLDivElement>(null);
@@ -110,6 +114,7 @@ function TextAreaChat({
       ...(input.trim() !== '' && { text: input.trim() }),
       ...(images.length > 0 && { images: images.map((img) => img.id) }),
       model: model,
+      thinking: supportsThinking, // Automatically enable thinking for models that support it
     };
     onSubmit(content);
     setInput('');
@@ -280,12 +285,6 @@ function TextAreaChat({
     setIsDragging(false);
     setIsDragHover(false);
   };
-
-  useEffect(() => {
-    if (images.length > 1 && model !== 'quality') {
-      setModel('quality');
-    }
-  }, [images, setModel, model]);
 
   const handleItemsChange = (event: ChangeEvent<HTMLInputElement>) => {
     const selectedItems = event.target.files;

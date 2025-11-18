@@ -18,7 +18,7 @@ export function PromptView() {
   const { isSidebarOpen } = useOutletContext<{ isSidebarOpen: boolean }>();
   const queryClient = useQueryClient();
 
-  const [model, setModel] = useState<Model>('fast');
+  const [model, setModel] = useState<Model>('anthropic/claude-sonnet-4.5');
   const [isLoaded, setIsLoaded] = useState(false);
   const [images, setImages] = useState<MessageItem[]>([]);
 

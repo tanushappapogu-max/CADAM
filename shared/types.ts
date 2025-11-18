@@ -1,5 +1,5 @@
 import { Database } from './database.ts';
-export type Model = 'quality' | 'fast';
+export type Model = string;
 
 export type Message = Omit<
   Database['public']['Tables']['messages']['Row'],
@@ -29,6 +29,7 @@ export type Content = {
   images?: string[];
   // For streaming support - shows in-progress tool calls
   toolCalls?: ToolCall[];
+  thinking?: boolean;
 };
 
 export type ParametricArtifact = {

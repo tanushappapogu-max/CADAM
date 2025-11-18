@@ -356,7 +356,7 @@ export function useSendContentMutation({
       });
 
       await sendToParametricChat({
-        model: content.model ?? 'fast',
+        model: content.model ?? 'anthropic/claude-sonnet-4.5',
         messageId: userMessage.id,
         conversationId: conversation.id,
       });
@@ -435,7 +435,7 @@ export function useEditMessageMutation() {
       });
 
       sendToParametricChat({
-        model: updatedMessage.content.model ?? 'fast',
+        model: updatedMessage.content.model ?? 'anthropic/claude-sonnet-4.5',
         messageId: userMessage.id,
         conversationId: conversation.id,
       });
@@ -514,7 +514,7 @@ export function useChangeParameters() {
 
       const newContent: Content = {
         text: message.content.text ?? '',
-        model: message.content.model ?? 'fast',
+        model: message.content.model ?? 'anthropic/claude-sonnet-4.5',
         artifact: {
           title: message.content.artifact?.title ?? '',
           version: message.content.artifact?.version ?? '',

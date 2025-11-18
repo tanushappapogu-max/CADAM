@@ -49,6 +49,51 @@ export async function getSignedUrls(
     : [];
 }
 
+/**
+ * Downloads images from Supabase Storage and converts them to base64 data URLs
+ * This is needed for OpenRouter/OpenAI API which may not be able to fetch remote URLs
+ */
+export async function getBase64Images(
+  supabaseClient: SupabaseClient,
+  bucket: string,
+  paths: string[],
+): Promise<Array<{ data: string; mediaType: string }>> {
+  const images = await Promise.all(
+    paths.map(async (path) => {
+      try {
+        const { data, error } = await supabaseClient.storage
+          .from(bucket)
+          .download(path);
+
+        if (error || !data) {
+          console.error(`Failed to download image ${path}:`, error);
+          return null;
+        }
+
+        // Convert Blob to ArrayBuffer to Uint8Array
+        const arrayBuffer = await data.arrayBuffer();
+        const uint8Array = new Uint8Array(arrayBuffer);
+        
+        // Convert to base64
+        const base64 = btoa(String.fromCharCode(...uint8Array));
+        
+        // Determine media type from blob type or default to jpeg
+        const mediaType = data.type || 'image/jpeg';
+        
+        return {
+          data: `data:${mediaType};base64,${base64}`,
+          mediaType,
+        };
+      } catch (err) {
+        console.error(`Error processing image ${path}:`, err);
+        return null;
+      }
+    })
+  );
+
+  return images.filter((img): img is { data: string; mediaType: string } => img !== null);
+}
+
 // Format user message blocks (supports text, error context and signed image URLs)
 export async function formatUserMessage(
   message: CoreMessage,
@@ -76,21 +121,21 @@ export async function formatUserMessage(
     const imageFiles = message.content.images.map(
       (imageId) => `${userId}/${conversationId}/${imageId}`,
     );
-    const imageInputs = await getSignedUrls(
+    const base64Images = await getBase64Images(
       supabaseClient,
       'images',
       imageFiles,
     );
 
-    if (imageInputs.length > 0) {
+    if (base64Images.length > 0) {
       parts.push({
         type: 'text',
         text: `Reference images (IDs: ${message.content.images.join(', ')}):`,
       });
       parts.push(
-        ...imageInputs.map((image) => ({
+        ...base64Images.map((image) => ({
           type: 'image' as const,
-          source: { type: 'url' as const, url: image },
+          source: { type: 'base64' as const, media_type: image.mediaType, data: image.data.split(',')[1] },
         })),
       );
     } else {

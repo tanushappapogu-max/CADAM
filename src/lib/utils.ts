@@ -19,7 +19,7 @@ export const PARAMETRIC_MODELS: ModelConfig[] = [
   {
     id: 'anthropic/claude-sonnet-4.5',
     name: 'Claude Sonnet 4.5',
-    description: 'Latest Anthropic model with good CAD generation',
+    description: 'Latest Anthropic model with reliable CAD generation',
     provider: 'Anthropic',
     supportsTools: true,
     supportsThinking: true,

@@ -18,7 +18,7 @@ export function PromptView() {
   const { isSidebarOpen } = useOutletContext<{ isSidebarOpen: boolean }>();
   const queryClient = useQueryClient();
 
-  const [model, setModel] = useState<Model>('fast');
+  const [model, setModel] = useState<Model>('google/gemini-3-pro-preview');
   const [isLoaded, setIsLoaded] = useState(false);
   const [images, setImages] = useState<MessageItem[]>([]);
 

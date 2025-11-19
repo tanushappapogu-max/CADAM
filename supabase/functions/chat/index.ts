@@ -58,15 +58,10 @@ interface OpenRouterRequest {
   tools?: any[]; // OpenRouter/OpenAI tool definition
   stream?: boolean;
   max_tokens?: number;
-  provider?: {
-    anthropic?: {
-      thinking: {
-        type: string;
-        budget_tokens: number;
-      };
-    };
+  reasoning?: {
+    max_tokens?: number;
+    effort?: 'high' | 'medium' | 'low';
   };
-  include_reasoning?: boolean;
 }
 
 async function generateTitleFromMessages(
@@ -424,23 +419,13 @@ Deno.serve(async (req) => {
     };
 
     // Add reasoning/thinking parameter if requested and supported
-    if (thinking && model.includes('anthropic')) {
-      // For OpenRouter + Anthropic, we can use the 'thinking' parameter in the provider object
-      // OR top level if OpenRouter normalizes it. Let's use provider object for safety.
-      requestBody.provider = {
-        anthropic: {
-          thinking: {
-            type: 'enabled',
-            budget_tokens: 12000, // Leave some room for output
-          }
-        }
+    // OpenRouter uses a unified 'reasoning' parameter
+    if (thinking) {
+      requestBody.reasoning = {
+        max_tokens: 12000
       };
-      // When thinking is enabled, max_tokens must be higher than budget_tokens
-      requestBody.max_tokens = 20000; 
-    } else if (thinking && !model.includes('anthropic')) {
-      // Try the OpenRouter normalized include_reasoning flag for other models
-      // This works for some models that support reasoning but aren't Anthropic
-      requestBody.include_reasoning = true;
+      // Ensure total max_tokens is high enough to accommodate reasoning + output
+      requestBody.max_tokens = 20000;
     }
 
     // Log messages for debugging (especially image content)
@@ -664,18 +649,11 @@ Deno.serve(async (req) => {
             };
             
             // Also apply thinking to code generation if enabled
-            if (thinking && model.includes('anthropic')) {
-               codeRequestBody.provider = {
-                anthropic: {
-                  thinking: {
-                    type: 'enabled',
-                    budget_tokens: 12000,
-                  }
-                }
+            if (thinking) {
+              codeRequestBody.reasoning = {
+                max_tokens: 12000
               };
               codeRequestBody.max_tokens = 20000;
-            } else if (thinking && !model.includes('anthropic')) {
-               codeRequestBody.include_reasoning = true;
             }
 
             const [codeResult, titleResult] = await Promise.allSettled([

@@ -40,6 +40,37 @@ function markToolAsError(content: Content, toolId: string): Content {
   };
 }
 
+// Anthropic block types for type safety
+interface AnthropicTextBlock {
+  type: 'text';
+  text: string;
+}
+
+interface AnthropicImageBlock {
+  type: 'image';
+  source:
+    | {
+        type: 'base64';
+        media_type: string;
+        data: string;
+      }
+    | {
+        type: 'url';
+        url: string;
+      };
+}
+
+type AnthropicBlock = AnthropicTextBlock | AnthropicImageBlock;
+
+function isAnthropicBlock(block: unknown): block is AnthropicBlock {
+  if (typeof block !== 'object' || block === null) return false;
+  const b = block as Record<string, unknown>;
+  return (
+    (b.type === 'text' && typeof b.text === 'string') ||
+    (b.type === 'image' && typeof b.source === 'object' && b.source !== null)
+  );
+}
+
 // Convert Anthropic-style message to OpenAI format
 interface OpenAIMessage {
   role: 'system' | 'user' | 'assistant' | 'tool';
@@ -379,25 +410,33 @@ Deno.serve(async (req) => {
           return {
             role: 'user' as const,
             content: formatted.content.map((block: unknown) => {
-              if (block.type === 'text') {
-                return { type: 'text', text: block.text };
-              } else if (block.type === 'image') {
-                // Handle both URL and base64 image formats
-                let imageUrl: string;
-                if (block.source.type === 'base64') {
-                  // Convert Anthropic base64 format to OpenAI data URL format
-                  imageUrl = `data:${block.source.media_type};base64,${block.source.data}`;
-                } else {
-                  // Use URL directly
-                  imageUrl = block.source.url;
+              if (isAnthropicBlock(block)) {
+                if (block.type === 'text') {
+                  return { type: 'text', text: block.text };
+                } else if (block.type === 'image') {
+                  // Handle both URL and base64 image formats
+                  let imageUrl: string;
+                  if (
+                    'type' in block.source &&
+                    block.source.type === 'base64'
+                  ) {
+                    // Convert Anthropic base64 format to OpenAI data URL format
+                    imageUrl = `data:${block.source.media_type};base64,${block.source.data}`;
+                  } else if ('url' in block.source) {
+                    // Use URL directly
+                    imageUrl = block.source.url;
+                  } else {
+                    // Fallback or error case
+                    return block;
+                  }
+                  return {
+                    type: 'image_url',
+                    image_url: {
+                      url: imageUrl,
+                      detail: 'auto', // Auto-detect appropriate detail level
+                    },
+                  };
                 }
-                return {
-                  type: 'image_url',
-                  image_url: {
-                    url: imageUrl,
-                    detail: 'auto', // Auto-detect appropriate detail level
-                  },
-                };
               }
               return block;
             }),

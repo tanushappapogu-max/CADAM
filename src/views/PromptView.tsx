@@ -76,6 +76,8 @@ export function PromptView() {
       sendMessage(content);
 
       // Generate title in the background (don't await)
+      // Note: We don't need to check if a title exists because this is strictly for new conversations
+      // where the title is initialized to "New Conversation"
       generateConversationTitle(conversation.id, content)
         .then(async (title) => {
           // Update conversation with generated title

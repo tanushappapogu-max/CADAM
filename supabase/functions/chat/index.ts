@@ -52,6 +52,23 @@ interface OpenAIMessage {
   }>;
 }
 
+interface OpenRouterRequest {
+  model: string;
+  messages: OpenAIMessage[];
+  tools?: any[]; // OpenRouter/OpenAI tool definition
+  stream?: boolean;
+  max_tokens?: number;
+  provider?: {
+    anthropic?: {
+      thinking: {
+        type: string;
+        budget_tokens: number;
+      };
+    };
+  };
+  include_reasoning?: boolean;
+}
+
 async function generateTitleFromMessages(
   messagesToSend: OpenAIMessage[],
 ): Promise<string> {
@@ -355,35 +372,33 @@ Deno.serve(async (req) => {
               conversationId,
             );
             // Convert Anthropic-style to OpenAI-style
-            if (Array.isArray(formatted.content)) {
-              return {
-                role: 'user' as const,
-                content: formatted.content.map((block: any) => {
-                  if (block.type === 'text') {
-                    return { type: 'text', text: block.text };
-                  } else if (block.type === 'image') {
-                    // Handle both URL and base64 image formats
-                    let imageUrl: string;
-                    if (block.source.type === 'base64') {
-                      // Convert Anthropic base64 format to OpenAI data URL format
-                      imageUrl = `data:${block.source.media_type};base64,${block.source.data}`;
-                    } else {
-                      // Use URL directly
-                      imageUrl = block.source.url;
-                    }
-                    return {
-                      type: 'image_url',
-                      image_url: { 
-                        url: imageUrl,
-                        detail: 'auto' // Auto-detect appropriate detail level
-                      },
-                    };
+            // formatUserMessage returns content as an array
+            return {
+              role: 'user' as const,
+              content: formatted.content.map((block: any) => {
+                if (block.type === 'text') {
+                  return { type: 'text', text: block.text };
+                } else if (block.type === 'image') {
+                  // Handle both URL and base64 image formats
+                  let imageUrl: string;
+                  if (block.source.type === 'base64') {
+                    // Convert Anthropic base64 format to OpenAI data URL format
+                    imageUrl = `data:${block.source.media_type};base64,${block.source.data}`;
+                  } else {
+                    // Use URL directly
+                    imageUrl = block.source.url;
                   }
-                  return block;
-                }),
-              };
-            }
-            return formatted as OpenAIMessage;
+                  return {
+                    type: 'image_url',
+                    image_url: { 
+                      url: imageUrl,
+                      detail: 'auto' // Auto-detect appropriate detail level
+                    },
+                  };
+                }
+                return block;
+              }),
+            };
           }
           // Assistant messages: send code or text from history as plain text
           return {
@@ -397,7 +412,7 @@ Deno.serve(async (req) => {
     );
 
     // Prepare request body
-    const requestBody: any = {
+    const requestBody: OpenRouterRequest = {
       model,
       messages: [
         { role: 'system', content: PARAMETRIC_AGENT_PROMPT },
@@ -639,7 +654,7 @@ Deno.serve(async (req) => {
                 ];
             
             // Code generation request logic
-            const codeRequestBody: any = {
+            const codeRequestBody: OpenRouterRequest = {
               model,
               messages: [
                 { role: 'system', content: STRICT_CODE_PROMPT },

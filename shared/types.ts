@@ -27,9 +27,17 @@ export type Content = {
   artifact?: ParametricArtifact;
   index?: number;
   images?: string[];
+  mesh?: Mesh;
   // For streaming support - shows in-progress tool calls
   toolCalls?: ToolCall[];
   thinking?: boolean;
+};
+
+export type MeshFileType = string;
+
+export type Mesh = {
+  id: string;
+  fileType: MeshFileType;
 };
 
 export type ParametricArtifact = {

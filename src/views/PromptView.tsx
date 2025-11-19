@@ -10,6 +10,7 @@ import { MessageItem } from '@/types/misc';
 import { cn } from '@/lib/utils';
 import { SelectedItemsContext } from '@/contexts/SelectedItemsContext';
 import { useSendContentMutation } from '@/services/messageService';
+import { generateConversationTitle } from '@/services/conversationService';
 
 export function PromptView() {
   const navigate = useNavigate();
@@ -73,6 +74,26 @@ export function PromptView() {
       if (conversationError) throw conversationError;
 
       sendMessage(content);
+
+      // Generate title in the background (don't await)
+      generateConversationTitle(conversation.id, content)
+        .then(async (title) => {
+          // Update conversation with generated title
+          await supabase
+            .from('conversations')
+            .update({ title })
+            .eq('id', conversation.id);
+
+          // Invalidate queries to refresh UI
+          queryClient.invalidateQueries({ queryKey: ['conversations'] });
+          queryClient.invalidateQueries({
+            queryKey: ['conversation', conversation.id],
+          });
+        })
+        .catch((error) => {
+          console.error('Failed to generate title:', error);
+          // Don't show error to user, just log it
+        });
 
       return {
         conversationId: conversation.id,

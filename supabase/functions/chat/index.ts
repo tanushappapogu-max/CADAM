@@ -43,7 +43,9 @@ function markToolAsError(content: Content, toolId: string): Content {
 // Convert Anthropic-style message to OpenAI format
 interface OpenAIMessage {
   role: 'system' | 'user' | 'assistant' | 'tool';
-  content: string | Array<{ type: string; text?: string; image_url?: { url: string } }>;
+  content:
+    | string
+    | Array<{ type: string; text?: string; image_url?: { url: string } }>;
   tool_call_id?: string;
   tool_calls?: Array<{
     id: string;
@@ -55,7 +57,7 @@ interface OpenAIMessage {
 interface OpenRouterRequest {
   model: string;
   messages: OpenAIMessage[];
-  tools?: any[]; // OpenRouter/OpenAI tool definition
+  tools?: unknown[]; // OpenRouter/OpenAI tool definition
   stream?: boolean;
   max_tokens?: number;
   reasoning?: {
@@ -80,7 +82,7 @@ async function generateTitleFromMessages(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+        Authorization: `Bearer ${OPENROUTER_API_KEY}`,
         'HTTP-Referer': 'https://adam-cad.com',
         'X-Title': 'Adam CAD',
       },
@@ -92,7 +94,8 @@ async function generateTitleFromMessages(
           ...messagesToSend,
           {
             role: 'user',
-            content: 'Generate a concise title for the 3D object that will be generated based on the previous messages.',
+            content:
+              'Generate a concise title for the 3D object that will be generated based on the previous messages.',
           },
         ],
       }),
@@ -157,12 +160,17 @@ const tools = [
     type: 'function',
     function: {
       name: 'build_parametric_model',
-      description: 'Generate or update an OpenSCAD model from user intent and context. Include parameters and ensure the model is manifold and 3D-printable.',
+      description:
+        'Generate or update an OpenSCAD model from user intent and context. Include parameters and ensure the model is manifold and 3D-printable.',
       parameters: {
         type: 'object',
         properties: {
           text: { type: 'string', description: 'User request for the model' },
-          imageIds: { type: 'array', items: { type: 'string' }, description: 'Image IDs to reference' },
+          imageIds: {
+            type: 'array',
+            items: { type: 'string' },
+            description: 'Image IDs to reference',
+          },
           baseCode: { type: 'string', description: 'Existing code to modify' },
           error: { type: 'string', description: 'Error to fix' },
         },
@@ -173,7 +181,8 @@ const tools = [
     type: 'function',
     function: {
       name: 'apply_parameter_changes',
-      description: 'Apply simple parameter updates to the current artifact without re-generating the whole model.',
+      description:
+        'Apply simple parameter updates to the current artifact without re-generating the whole model.',
       parameters: {
         type: 'object',
         properties: {
@@ -356,54 +365,52 @@ Deno.serve(async (req) => {
     }
     const currentMessageBranch = messageTree.getPath(newMessage.id);
 
-    const messagesToSend: OpenAIMessage[] = (
-      await Promise.all(
-        currentMessageBranch.map(async (msg: CoreMessage) => {
-          if (msg.role === 'user') {
-            const formatted = await formatUserMessage(
-              msg,
-              supabaseClient,
-              userData.user.id,
-              conversationId,
-            );
-            // Convert Anthropic-style to OpenAI-style
-            // formatUserMessage returns content as an array
-            return {
-              role: 'user' as const,
-              content: formatted.content.map((block: any) => {
-                if (block.type === 'text') {
-                  return { type: 'text', text: block.text };
-                } else if (block.type === 'image') {
-                  // Handle both URL and base64 image formats
-                  let imageUrl: string;
-                  if (block.source.type === 'base64') {
-                    // Convert Anthropic base64 format to OpenAI data URL format
-                    imageUrl = `data:${block.source.media_type};base64,${block.source.data}`;
-                  } else {
-                    // Use URL directly
-                    imageUrl = block.source.url;
-                  }
-                  return {
-                    type: 'image_url',
-                    image_url: { 
-                      url: imageUrl,
-                      detail: 'auto' // Auto-detect appropriate detail level
-                    },
-                  };
-                }
-                return block;
-              }),
-            };
-          }
-          // Assistant messages: send code or text from history as plain text
+    const messagesToSend: OpenAIMessage[] = await Promise.all(
+      currentMessageBranch.map(async (msg: CoreMessage) => {
+        if (msg.role === 'user') {
+          const formatted = await formatUserMessage(
+            msg,
+            supabaseClient,
+            userData.user.id,
+            conversationId,
+          );
+          // Convert Anthropic-style to OpenAI-style
+          // formatUserMessage returns content as an array
           return {
-            role: 'assistant' as const,
-            content: msg.content.artifact
-              ? msg.content.artifact.code || ''
-              : msg.content.text || '',
+            role: 'user' as const,
+            content: formatted.content.map((block: unknown) => {
+              if (block.type === 'text') {
+                return { type: 'text', text: block.text };
+              } else if (block.type === 'image') {
+                // Handle both URL and base64 image formats
+                let imageUrl: string;
+                if (block.source.type === 'base64') {
+                  // Convert Anthropic base64 format to OpenAI data URL format
+                  imageUrl = `data:${block.source.media_type};base64,${block.source.data}`;
+                } else {
+                  // Use URL directly
+                  imageUrl = block.source.url;
+                }
+                return {
+                  type: 'image_url',
+                  image_url: {
+                    url: imageUrl,
+                    detail: 'auto', // Auto-detect appropriate detail level
+                  },
+                };
+              }
+              return block;
+            }),
           };
-        }),
-      )
+        }
+        // Assistant messages: send code or text from history as plain text
+        return {
+          role: 'assistant' as const,
+          content: msg.content.artifact
+            ? msg.content.artifact.code || ''
+            : msg.content.text || '',
+        };
+      }),
     );
 
     // Prepare request body
@@ -422,20 +429,23 @@ Deno.serve(async (req) => {
     // OpenRouter uses a unified 'reasoning' parameter
     if (thinking) {
       requestBody.reasoning = {
-        max_tokens: 12000
+        max_tokens: 12000,
       };
       // Ensure total max_tokens is high enough to accommodate reasoning + output
       requestBody.max_tokens = 20000;
     }
 
     // Log messages for debugging (especially image content)
-    console.log('Sending messages to OpenRouter:', JSON.stringify(messagesToSend, null, 2));
+    console.log(
+      'Sending messages to OpenRouter:',
+      JSON.stringify(messagesToSend, null, 2),
+    );
 
     const response = await fetch(OPENROUTER_API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+        Authorization: `Bearer ${OPENROUTER_API_KEY}`,
         'HTTP-Referer': 'https://adam-cad.com',
         'X-Title': 'Adam CAD',
       },
@@ -445,7 +455,9 @@ Deno.serve(async (req) => {
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`OpenRouter API Error: ${response.status} - ${errorText}`);
-      throw new Error(`OpenRouter API error: ${response.statusText} (${response.status})`);
+      throw new Error(
+        `OpenRouter API error: ${response.statusText} (${response.status})`,
+      );
     }
 
     const responseStream = new ReadableStream({
@@ -505,18 +517,18 @@ Deno.serve(async (req) => {
                     };
                     streamMessage(controller, { ...newMessageData, content });
                   }
-                  
+
                   // Handle reasoning content (if returned by OpenRouter)
                   if (delta.reasoning) {
-                     // We can optionally display this, but for now we just consume it so it doesn't break anything
-                     // Or append to text if we want to show it? 
-                     // Usually we don't show internal reasoning in the final message unless explicitly requested.
+                    // We can optionally display this, but for now we just consume it so it doesn't break anything
+                    // Or append to text if we want to show it?
+                    // Usually we don't show internal reasoning in the final message unless explicitly requested.
                   }
 
                   // Handle tool calls
                   if (delta.tool_calls) {
                     for (const toolCall of delta.tool_calls) {
-                      const index = toolCall.index || 0;
+                      const _index = toolCall.index || 0;
 
                       // Start of new tool call
                       if (toolCall.id) {
@@ -536,18 +548,25 @@ Deno.serve(async (req) => {
                             },
                           ],
                         };
-                        streamMessage(controller, { ...newMessageData, content });
+                        streamMessage(controller, {
+                          ...newMessageData,
+                          content,
+                        });
                       }
 
                       // Accumulate arguments
                       if (toolCall.function?.arguments && currentToolCall) {
-                        currentToolCall.arguments += toolCall.function.arguments;
+                        currentToolCall.arguments +=
+                          toolCall.function.arguments;
                       }
                     }
                   }
 
                   // Check if tool call is complete (when we get finish_reason)
-                  if (chunk.choices?.[0]?.finish_reason === 'tool_calls' && currentToolCall) {
+                  if (
+                    chunk.choices?.[0]?.finish_reason === 'tool_calls' &&
+                    currentToolCall
+                  ) {
                     await handleToolCall(currentToolCall);
                     currentToolCall = null;
                   }
@@ -584,7 +603,11 @@ Deno.serve(async (req) => {
           controller.close();
         }
 
-        async function handleToolCall(toolCall: { id: string; name: string; arguments: string }) {
+        async function handleToolCall(toolCall: {
+          id: string;
+          name: string;
+          arguments: string;
+        }) {
           if (toolCall.name === 'build_parametric_model') {
             let toolInput: {
               text?: string;
@@ -626,7 +649,11 @@ Deno.serve(async (req) => {
               ? [
                   {
                     role: 'user' as const,
-                    content: userRequest + (toolInput.error ? `\n\nFix this OpenSCAD error: ${toolInput.error}` : ''),
+                    content:
+                      userRequest +
+                      (toolInput.error
+                        ? `\n\nFix this OpenSCAD error: ${toolInput.error}`
+                        : ''),
                   },
                 ]
               : [
@@ -634,10 +661,14 @@ Deno.serve(async (req) => {
                   ...baseContext,
                   {
                     role: 'user' as const,
-                    content: userRequest + (toolInput.error ? `\n\nFix this OpenSCAD error: ${toolInput.error}` : ''),
+                    content:
+                      userRequest +
+                      (toolInput.error
+                        ? `\n\nFix this OpenSCAD error: ${toolInput.error}`
+                        : ''),
                   },
                 ];
-            
+
             // Code generation request logic
             const codeRequestBody: OpenRouterRequest = {
               model,
@@ -647,11 +678,11 @@ Deno.serve(async (req) => {
               ],
               max_tokens: 16000,
             };
-            
+
             // Also apply thinking to code generation if enabled
             if (thinking) {
               codeRequestBody.reasoning = {
-                max_tokens: 12000
+                max_tokens: 12000,
               };
               codeRequestBody.max_tokens = 20000;
             }
@@ -661,26 +692,29 @@ Deno.serve(async (req) => {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+                  Authorization: `Bearer ${OPENROUTER_API_KEY}`,
                   'HTTP-Referer': 'https://adam-cad.com',
                   'X-Title': 'Adam CAD',
                 },
                 body: JSON.stringify(codeRequestBody),
-              }).then(async r => {
-                 if (!r.ok) {
-                    const t = await r.text();
-                    throw new Error(`Code gen error: ${r.status} - ${t}`);
-                 }
-                 return r.json();
+              }).then(async (r) => {
+                if (!r.ok) {
+                  const t = await r.text();
+                  throw new Error(`Code gen error: ${r.status} - ${t}`);
+                }
+                return r.json();
               }),
               generateTitleFromMessages(messagesToSend),
             ]);
 
             let code = '';
-            if (codeResult.status === 'fulfilled' && codeResult.value.choices?.[0]?.message?.content) {
+            if (
+              codeResult.status === 'fulfilled' &&
+              codeResult.value.choices?.[0]?.message?.content
+            ) {
               code = codeResult.value.choices[0].message.content.trim();
             } else if (codeResult.status === 'rejected') {
-               console.error("Code generation failed:", codeResult.reason);
+              console.error('Code generation failed:', codeResult.reason);
             }
 
             const codeBlockRegex = /^```(?:openscad)?\n?([\s\S]*?)\n?```$/;
@@ -761,8 +795,7 @@ Deno.serve(async (req) => {
                 if (target.type === 'number') coerced = Number(upd.value);
                 else if (target.type === 'boolean')
                   coerced = String(upd.value) === 'true';
-                else if (target.type === 'string')
-                  coerced = String(upd.value);
+                else if (target.type === 'string') coerced = String(upd.value);
                 else coerced = upd.value;
               } catch (_) {
                 coerced = upd.value;

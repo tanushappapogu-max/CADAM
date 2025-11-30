@@ -7,6 +7,7 @@ import { UserMessage } from '@/components/chat/UserMessage';
 import { useConversation } from '@/services/conversationService';
 import { AssistantLoading } from '@/components/chat/AssistantLoading';
 import { ChatTitle } from '@/components/chat/ChatTitle';
+import { ShareButton } from '@/components/ShareButton';
 import { TreeNode } from '@shared/Tree';
 import { PARAMETRIC_MODELS } from '@/lib/utils';
 import {
@@ -28,7 +29,9 @@ export function ChatSection({ messages }: ChatSectionProps) {
   // Sync model selection with the conversation history (last used model)
   useEffect(() => {
     if (messages.length > 0) {
-      const lastAssistantMessage = [...messages].reverse().find((m) => m.role === 'assistant');
+      const lastAssistantMessage = [...messages]
+        .reverse()
+        .find((m) => m.role === 'assistant');
       if (lastAssistantMessage?.content?.model) {
         setModel(lastAssistantMessage.content.model);
       }
@@ -83,6 +86,7 @@ export function ChatSection({ messages }: ChatSectionProps) {
           <div className="min-w-0 flex-1">
             <ChatTitle />
           </div>
+          <ShareButton />
         </div>
       </div>
       <ScrollArea

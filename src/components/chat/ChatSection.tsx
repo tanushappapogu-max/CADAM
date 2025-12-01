@@ -17,9 +17,13 @@ import {
 
 interface ChatSectionProps {
   messages: TreeNode<Message>[];
+  isReadOnly?: boolean;
 }
 
-export function ChatSection({ messages }: ChatSectionProps) {
+export function ChatSection({
+  messages,
+  isReadOnly = false,
+}: ChatSectionProps) {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { conversation } = useConversation();
   const [model, setModel] = useState<Model>(PARAMETRIC_MODELS[0].id);
@@ -86,7 +90,7 @@ export function ChatSection({ messages }: ChatSectionProps) {
           <div className="min-w-0 flex-1">
             <ChatTitle />
           </div>
-          <ShareButton />
+          {!isReadOnly && <ShareButton />}
         </div>
       </div>
       <ScrollArea
@@ -102,9 +106,14 @@ export function ChatSection({ messages }: ChatSectionProps) {
                   <AssistantMessage
                     message={message}
                     currentVersion={getCurrentVersion(index)}
+                    isReadOnly={isReadOnly}
                   />
                 ) : (
-                  <UserMessage message={message} isLoading={isLoading} />
+                  <UserMessage
+                    message={message}
+                    isLoading={isLoading}
+                    isReadOnly={isReadOnly}
+                  />
                 )}
               </div>
             );
@@ -114,16 +123,18 @@ export function ChatSection({ messages }: ChatSectionProps) {
           )}
         </div>
       </ScrollArea>
-      <div className="w-full min-w-52 max-w-xl bg-transparent px-4 pb-6">
-        <TextAreaChat
-          onSubmit={sendMessage}
-          placeholder="Keep iterating with Adam..."
-          disabled={isLoading}
-          model={model}
-          setModel={setModel}
-          conversation={conversation}
-        />
-      </div>
+      {!isReadOnly && (
+        <div className="w-full min-w-52 max-w-xl bg-transparent px-4 pb-6">
+          <TextAreaChat
+            onSubmit={sendMessage}
+            placeholder="Keep iterating with Adam..."
+            disabled={isLoading}
+            model={model}
+            setModel={setModel}
+            conversation={conversation}
+          />
+        </div>
+      )}
     </div>
   );
 }

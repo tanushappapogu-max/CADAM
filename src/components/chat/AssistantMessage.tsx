@@ -36,11 +36,13 @@ import {
 interface AssistantMessageProps {
   message: TreeNode<Message>;
   currentVersion: number;
+  isReadOnly?: boolean;
 }
 
 export function AssistantMessage({
   message,
   currentVersion,
+  isReadOnly = false,
 }: AssistantMessageProps) {
   const { conversation, updateConversation } = useConversation();
   const { currentMessage, setCurrentMessage } = useCurrentMessage();
@@ -139,99 +141,103 @@ export function AssistantMessage({
             </>
           )}
 
-          {(message.siblings.length > 1 ||
-            !isLastMessage ||
-            message.parent_message_id) && (
-            <div className="flex items-center gap-1">
-              {!isLastMessage && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() => restoreMessage(message)}
-                      disabled={isLoading}
-                      className="h-6 w-6 rounded-lg p-0"
-                    >
-                      <History className="h-3 w-3 p-0 text-adam-neutral-100" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <span>Restore</span>
-                  </TooltipContent>
-                </Tooltip>
-              )}
-
-              {message.parent_message_id && (
-                <div className="flex items-center">
+          {!isReadOnly &&
+            (message.siblings.length > 1 ||
+              !isLastMessage ||
+              message.parent_message_id) && (
+              <div className="flex items-center gap-1">
+                {!isLastMessage && (
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
-                        size="icon"
                         variant="outline"
-                        onClick={() => {
-                          retryMessage({
-                            model,
-                            id: message.parent_message_id!,
-                          });
-                        }}
+                        size="icon"
+                        onClick={() => restoreMessage(message)}
                         disabled={isLoading}
-                        className={cn(
-                          'h-6 w-6 rounded-lg rounded-r-none border-r-0 p-0',
-                        )}
+                        className="h-6 w-6 rounded-lg p-0"
                       >
-                        <RefreshCw className="h-3 w-3 p-0 text-adam-neutral-100" />
+                        <History className="h-3 w-3 p-0 text-adam-neutral-100" />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <span>Retry</span>
+                      <span>Restore</span>
                     </TooltipContent>
                   </Tooltip>
-                  {model && (
-                    <RetryModelSelector
-                      message={message}
-                      onRetry={(model) =>
-                        retryMessage({ model, id: message.parent_message_id! })
+                )}
+
+                {message.parent_message_id && (
+                  <div className="flex items-center">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          onClick={() => {
+                            retryMessage({
+                              model,
+                              id: message.parent_message_id!,
+                            });
+                          }}
+                          disabled={isLoading}
+                          className={cn(
+                            'h-6 w-6 rounded-lg rounded-r-none border-r-0 p-0',
+                          )}
+                        >
+                          <RefreshCw className="h-3 w-3 p-0 text-adam-neutral-100" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <span>Retry</span>
+                      </TooltipContent>
+                    </Tooltip>
+                    {model && (
+                      <RetryModelSelector
+                        message={message}
+                        onRetry={(model) =>
+                          retryMessage({
+                            model,
+                            id: message.parent_message_id!,
+                          })
+                        }
+                        disabled={isLoading}
+                        className="h-6 w-fit rounded-l-none"
+                      />
+                    )}
+                  </div>
+                )}
+                {message.siblings.length > 1 && (
+                  <div className="flex h-6 items-center gap-0.5 rounded-lg border border-adam-neutral-700 bg-adam-bg-secondary-dark">
+                    <Button
+                      disabled={branchIndex === 0 || isLoading}
+                      variant="outline"
+                      size="icon"
+                      onClick={() => {
+                        changeLeaf(leafNodes[branchIndex - 1].id);
+                      }}
+                      className="h-full w-6 rounded-lg rounded-r-none border-none p-0"
+                    >
+                      <ChevronLeft className="h-3 w-3 p-0 text-adam-neutral-100" />
+                    </Button>
+                    <span className="text-xs tracking-widest text-adam-neutral-100">
+                      {branchIndex + 1}/{message.siblings.length}
+                    </span>
+                    <Button
+                      disabled={
+                        branchIndex === message.siblings.length - 1 || isLoading
                       }
-                      disabled={isLoading}
-                      className="h-6 w-fit rounded-l-none"
-                    />
-                  )}
-                </div>
-              )}
-              {message.siblings.length > 1 && (
-                <div className="flex h-6 items-center gap-0.5 rounded-lg border border-adam-neutral-700 bg-adam-bg-secondary-dark">
-                  <Button
-                    disabled={branchIndex === 0 || isLoading}
-                    variant="outline"
-                    size="icon"
-                    onClick={() => {
-                      changeLeaf(leafNodes[branchIndex - 1].id);
-                    }}
-                    className="h-full w-6 rounded-lg rounded-r-none border-none p-0"
-                  >
-                    <ChevronLeft className="h-3 w-3 p-0 text-adam-neutral-100" />
-                  </Button>
-                  <span className="text-xs tracking-widest text-adam-neutral-100">
-                    {branchIndex + 1}/{message.siblings.length}
-                  </span>
-                  <Button
-                    disabled={
-                      branchIndex === message.siblings.length - 1 || isLoading
-                    }
-                    variant="outline"
-                    size="icon"
-                    onClick={() => {
-                      changeLeaf(leafNodes[branchIndex + 1].id);
-                    }}
-                    className="h-full w-6 rounded-lg rounded-l-none border-none p-0"
-                  >
-                    <ChevronRight className="h-3 w-3 p-0 text-adam-neutral-100" />
-                  </Button>
-                </div>
-              )}
-            </div>
-          )}
+                      variant="outline"
+                      size="icon"
+                      onClick={() => {
+                        changeLeaf(leafNodes[branchIndex + 1].id);
+                      }}
+                      className="h-full w-6 rounded-lg rounded-l-none border-none p-0"
+                    >
+                      <ChevronRight className="h-3 w-3 p-0 text-adam-neutral-100" />
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
         </div>
       </div>
     </div>

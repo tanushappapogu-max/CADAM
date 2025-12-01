@@ -4,7 +4,8 @@ CREATE TABLE IF NOT EXISTS "public"."conversations" (
     "updated_at" timestamp with time zone DEFAULT "now"(),
     "user_id" "uuid" NOT NULL,
     "title" "text" NOT NULL,
-    "current_message_leaf_id" "uuid"
+    "current_message_leaf_id" "uuid",
+    "privacy" "text" DEFAULT 'private' CHECK (privacy IN ('public', 'private'))
 );
 
 
@@ -23,7 +24,11 @@ CREATE INDEX IF NOT EXISTS conversations_updated_at_idx ON "public"."conversatio
 
 CREATE INDEX IF NOT EXISTS conversations_user_id_idx ON "public"."conversations" USING btree (user_id);
 
+CREATE INDEX IF NOT EXISTS idx_conversations_privacy ON "public"."conversations" USING btree (privacy);
+
 
 CREATE POLICY "Users can manage their own conversations" ON "public"."conversations" USING ( (SELECT "auth"."uid"()) = "user_id" );
+
+CREATE POLICY "Public conversations are viewable by everyone" ON "public"."conversations" FOR SELECT USING (privacy = 'public');
 
 ALTER TABLE "public"."conversations" ENABLE ROW LEVEL SECURITY;

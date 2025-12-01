@@ -28,9 +28,14 @@ import { useEditMessageMutation } from '@/services/messageService';
 interface UserMessageProps {
   isLoading: boolean;
   message: TreeNode<Message>;
+  isReadOnly?: boolean;
 }
 
-export function UserMessage({ message, isLoading }: UserMessageProps) {
+export function UserMessage({
+  message,
+  isLoading,
+  isReadOnly = false,
+}: UserMessageProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [hovering, setHovering] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -167,98 +172,99 @@ export function UserMessage({ message, isLoading }: UserMessageProps) {
                 </div>
               </div>
             )}
-            {((hovering &&
-              (message.content.text || message.siblings.length > 1)) ||
-              isEditing) && (
-              <div className="absolute bottom-[-1.5rem] right-2 flex items-center gap-0.5 rounded-sm border border-adam-neutral-700 bg-adam-bg-secondary-dark p-0.5">
-                {!isEditing ? (
-                  <>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className={cn(
-                            'h-6 w-6 rounded-sm p-0',
-                            isLoading
-                              ? 'cursor-not-allowed opacity-50'
-                              : 'hover:bg-adam-neutral-800',
-                          )}
-                          onClick={() => {
-                            setIsEditing(true);
-                          }}
-                          disabled={isLoading}
-                        >
-                          <Pencil className="h-3 w-3 p-0 text-adam-neutral-100" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Edit</TooltipContent>
-                    </Tooltip>
-                    <Separator
-                      orientation="vertical"
-                      className="h-4 bg-adam-neutral-700"
-                    />
-                    {message.content.text && (
+            {!isReadOnly &&
+              ((hovering &&
+                (message.content.text || message.siblings.length > 1)) ||
+                isEditing) && (
+                <div className="absolute bottom-[-1.5rem] right-2 flex items-center gap-0.5 rounded-sm border border-adam-neutral-700 bg-adam-bg-secondary-dark p-0.5">
+                  {!isEditing ? (
+                    <>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-6 w-6 rounded-sm p-0 hover:bg-adam-neutral-800"
-                            onClick={handleCopy}
-                          >
-                            {copied ? (
-                              <Check className="h-3 w-3 p-0 text-adam-neutral-100" />
-                            ) : (
-                              <Copy className="h-3 w-3 p-0 text-adam-neutral-100" />
+                            className={cn(
+                              'h-6 w-6 rounded-sm p-0',
+                              isLoading
+                                ? 'cursor-not-allowed opacity-50'
+                                : 'hover:bg-adam-neutral-800',
                             )}
+                            onClick={() => {
+                              setIsEditing(true);
+                            }}
+                            disabled={isLoading}
+                          >
+                            <Pencil className="h-3 w-3 p-0 text-adam-neutral-100" />
                           </Button>
                         </TooltipTrigger>
-                        <TooltipContent>Copy Prompt</TooltipContent>
+                        <TooltipContent>Edit</TooltipContent>
                       </Tooltip>
-                    )}
-                    {message.siblings.length > 1 && (
-                      <>
-                        <Separator
-                          orientation="vertical"
-                          className="h-4 bg-adam-neutral-700"
-                        />
-                        <BranchNavigation
-                          branches={message.siblings}
-                          branchIndex={branchIndex}
-                          isLoading={isLoading}
-                          leafNodes={leafNodes}
-                          changeLeaf={changeLeaf}
-                        />
-                      </>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={handleEdit}
-                      className="h-6 w-6 rounded-sm p-0 hover:bg-adam-blue"
-                    >
-                      <Check className="h-3 w-3 p-0 text-adam-neutral-100" />
-                    </Button>
-                    <Separator
-                      orientation="vertical"
-                      className="h-4 bg-adam-neutral-700"
-                    />
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6 rounded-sm p-0 hover:bg-adam-neutral-800"
-                      onClick={handleCancel}
-                    >
-                      <X className="h-3 w-3 p-0 text-adam-neutral-100" />
-                    </Button>
-                  </>
-                )}
-              </div>
-            )}
+                      <Separator
+                        orientation="vertical"
+                        className="h-4 bg-adam-neutral-700"
+                      />
+                      {message.content.text && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 rounded-sm p-0 hover:bg-adam-neutral-800"
+                              onClick={handleCopy}
+                            >
+                              {copied ? (
+                                <Check className="h-3 w-3 p-0 text-adam-neutral-100" />
+                              ) : (
+                                <Copy className="h-3 w-3 p-0 text-adam-neutral-100" />
+                              )}
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Copy Prompt</TooltipContent>
+                        </Tooltip>
+                      )}
+                      {message.siblings.length > 1 && (
+                        <>
+                          <Separator
+                            orientation="vertical"
+                            className="h-4 bg-adam-neutral-700"
+                          />
+                          <BranchNavigation
+                            branches={message.siblings}
+                            branchIndex={branchIndex}
+                            isLoading={isLoading}
+                            leafNodes={leafNodes}
+                            changeLeaf={changeLeaf}
+                          />
+                        </>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={handleEdit}
+                        className="h-6 w-6 rounded-sm p-0 hover:bg-adam-blue"
+                      >
+                        <Check className="h-3 w-3 p-0 text-adam-neutral-100" />
+                      </Button>
+                      <Separator
+                        orientation="vertical"
+                        className="h-4 bg-adam-neutral-700"
+                      />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 rounded-sm p-0 hover:bg-adam-neutral-800"
+                        onClick={handleCancel}
+                      >
+                        <X className="h-3 w-3 p-0 text-adam-neutral-100" />
+                      </Button>
+                    </>
+                  )}
+                </div>
+              )}
           </>
         )}
       </div>

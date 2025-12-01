@@ -11,6 +11,7 @@ interface ParameterSliderProps {
   onValueChange: (value: number) => void;
   onValueCommit: (value: number) => void;
   step?: number;
+  disabled?: boolean;
 }
 
 function ParameterSliderBase({
@@ -18,6 +19,7 @@ function ParameterSliderBase({
   onValueChange,
   onValueCommit,
   step,
+  disabled = false,
 }: ParameterSliderProps) {
   const { min, max } = calculateParameterRange(param);
   const calculatedStep = step ?? calculateParameterStep(param);
@@ -38,6 +40,7 @@ function ParameterSliderBase({
       value={[Number(param.value)]}
       defaultValue={[Number(param.defaultValue)]}
       step={calculatedStep}
+      disabled={disabled}
     />
   );
 }

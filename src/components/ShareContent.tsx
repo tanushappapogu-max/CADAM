@@ -1,36 +1,93 @@
 import { Button } from '@/components/ui/button';
-import { ClipboardCheck, CopyIcon } from 'lucide-react';
+import { ClipboardCheck, CopyIcon, Loader2 } from 'lucide-react';
 import { useConversation } from '@/services/conversationService';
 import { useState } from 'react';
+import { toast } from '@/hooks/use-toast';
+
+type ShareState = 'idle' | 'updating' | 'copied';
 
 export function ShareContent() {
-  const { conversation, updateConversation } = useConversation();
-  const [justCopied, setJustCopied] = useState(false);
-
-  function handleChangePrivacy(privacy: 'public' | 'private') {
-    updateConversation?.({
-      ...conversation,
-      privacy,
-    });
-  }
-
-  const handlePublicClick = () => {
-    handleChangePrivacy('public');
-    copyToClipboard();
-  };
+  const { conversation, updateConversationAsync } = useConversation();
+  const [shareState, setShareState] = useState<ShareState>('idle');
 
   const shareLink = `${window.location.origin}${import.meta.env.BASE_URL}share/${conversation.id}`;
 
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(shareLink);
-    setJustCopied(true);
+  const copyToClipboard = async () => {
+    await navigator.clipboard.writeText(shareLink);
+    setShareState('copied');
     // setTimeout used here to reset the "copied" UI state after visual feedback
     setTimeout(() => {
-      setJustCopied(false);
+      setShareState('idle');
     }, 2000);
   };
 
+  const handlePublicClick = async () => {
+    if (!updateConversationAsync) {
+      toast({
+        title: 'Error',
+        description: 'Unable to update conversation',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setShareState('updating');
+    try {
+      await updateConversationAsync({
+        ...conversation,
+        privacy: 'public',
+      });
+      await copyToClipboard();
+      toast({
+        title: 'Link copied!',
+        description: 'Anyone with the link can now view this conversation',
+      });
+    } catch (error) {
+      setShareState('idle');
+      toast({
+        title: 'Failed to share',
+        description:
+          error instanceof Error ? error.message : 'An error occurred',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleMakePrivate = async () => {
+    if (!updateConversationAsync) {
+      toast({
+        title: 'Error',
+        description: 'Unable to update conversation',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setShareState('updating');
+    try {
+      await updateConversationAsync({
+        ...conversation,
+        privacy: 'private',
+      });
+      setShareState('idle');
+      toast({
+        title: 'Made private',
+        description: 'Only you can view this conversation now',
+      });
+    } catch (error) {
+      setShareState('idle');
+      toast({
+        title: 'Failed to make private',
+        description:
+          error instanceof Error ? error.message : 'An error occurred',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const isPublic = conversation.privacy === 'public';
+  const isUpdating = shareState === 'updating';
+  const justCopied = shareState === 'copied';
 
   return (
     <div className="flex w-full flex-col gap-6">
@@ -55,7 +112,8 @@ export function ShareContent() {
           </span>
           <button
             onClick={copyToClipboard}
-            className="flex shrink-0 items-center gap-2 rounded-full border-2 border-black bg-white px-4 py-2 text-sm font-medium text-black focus:outline-none"
+            disabled={isUpdating}
+            className="flex shrink-0 items-center gap-2 rounded-full border-2 border-black bg-white px-4 py-2 text-sm font-medium text-black focus:outline-none disabled:opacity-50"
           >
             {justCopied ? (
               <ClipboardCheck className="h-4 w-4" />
@@ -70,13 +128,32 @@ export function ShareContent() {
       {isPublic ? (
         <Button
           variant="destructive"
-          onClick={() => handleChangePrivacy('private')}
+          onClick={handleMakePrivate}
+          disabled={isUpdating}
         >
-          Make Private
+          {isUpdating ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Updating...
+            </>
+          ) : (
+            'Make Private'
+          )}
         </Button>
       ) : (
-        <Button variant="secondary" onClick={handlePublicClick}>
-          Share
+        <Button
+          variant="secondary"
+          onClick={handlePublicClick}
+          disabled={isUpdating}
+        >
+          {isUpdating ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Sharing...
+            </>
+          ) : (
+            'Share'
+          )}
         </Button>
       )}
     </div>

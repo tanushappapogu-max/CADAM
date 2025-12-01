@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Message } from '@shared/types';
+import { Conversation, Message } from '@shared/types';
 import { useConversation } from '@/services/conversationService';
 import { useCurrentMessage } from '@/contexts/CurrentMessageContext';
 import { useMessagesQuery } from '@/services/messageService';
@@ -18,6 +18,12 @@ import { ParameterSection } from '@/components/parameter/ParameterSection';
 import { useBlob } from '@/contexts/BlobContext';
 import { useColor } from '@/contexts/ColorContext';
 
+interface ParametricEditorProps {
+  isReadOnly?: boolean;
+  externalMessages?: Message[];
+  externalConversation?: Conversation;
+}
+
 const PANEL_SIZES = {
   CHAT: {
     DEFAULT: 30,
@@ -35,8 +41,13 @@ const PANEL_SIZES = {
   },
 } as const;
 
-export function ParametricEditor() {
-  const { conversation } = useConversation();
+export function ParametricEditor({
+  isReadOnly = false,
+  externalMessages,
+  externalConversation,
+}: ParametricEditorProps) {
+  const { conversation: hookConversation } = useConversation();
+  const conversation = externalConversation ?? hookConversation;
   const { currentMessage, setCurrentMessage } = useCurrentMessage();
   const { setBlob } = useBlob();
   const { setColor } = useColor();
@@ -48,7 +59,8 @@ export function ParametricEditor() {
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const [containerWidth, setContainerWidth] = useState(0);
 
-  const { data: messages = [] } = useMessagesQuery();
+  const { data: hookMessages = [] } = useMessagesQuery();
+  const messages = externalMessages ?? hookMessages;
 
   const lastMessage = useMemo(() => {
     if (conversation.current_message_leaf_id) {
@@ -213,7 +225,10 @@ export function ParametricEditor() {
           order={0}
         >
           <div className="relative h-full">
-            <ChatSection messages={currentMessageBranch ?? []} />
+            <ChatSection
+              messages={currentMessageBranch ?? []}
+              isReadOnly={isReadOnly}
+            />
           </div>
         </Panel>
         <PanelResizeHandle className="resize-handle group relative">
@@ -300,7 +315,7 @@ export function ParametricEditor() {
               order={2}
             >
               <div className="relative h-full">
-                <ParameterSection />
+                <ParameterSection isReadOnly={isReadOnly} />
               </div>
             </Panel>
           </>

@@ -9,3 +9,4 @@ CREATE POLICY "Public conversations are viewable by everyone"
 ON conversations FOR SELECT
 USING (privacy = 'public');
 
+

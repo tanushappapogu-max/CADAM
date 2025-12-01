@@ -23,7 +23,13 @@ import { downloadSTLFile, downloadOpenSCADFile } from '@/utils/downloadUtils';
 import { useChangeParameters } from '@/services/messageService';
 import { useBlob } from '@/contexts/BlobContext';
 
-export function ParameterSection() {
+interface ParameterSectionProps {
+  isReadOnly?: boolean;
+}
+
+export function ParameterSection({
+  isReadOnly = false,
+}: ParameterSectionProps) {
   const { blob } = useBlob();
   const changeParameters = useChangeParameters();
   const { currentMessage } = useCurrentMessage();
@@ -105,29 +111,31 @@ export function ParameterSection() {
             Parameters
           </span>
         </div>
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                className="h-8 w-8 rounded-full p-0 text-adam-text-primary transition-colors [@media(hover:hover)]:hover:bg-adam-neutral-950 [@media(hover:hover)]:hover:text-adam-neutral-10"
-                disabled={parameters.length === 0}
-                onClick={() => {
-                  const newParameters = parameters.map((param) => ({
-                    ...param,
-                    value: param.defaultValue,
-                  }));
-                  changeParameters(currentMessage, newParameters);
-                }}
-              >
-                <RefreshCcw className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Reset all parameters</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        {!isReadOnly && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="h-8 w-8 rounded-full p-0 text-adam-text-primary transition-colors [@media(hover:hover)]:hover:bg-adam-neutral-950 [@media(hover:hover)]:hover:text-adam-neutral-10"
+                  disabled={parameters.length === 0}
+                  onClick={() => {
+                    const newParameters = parameters.map((param) => ({
+                      ...param,
+                      value: param.defaultValue,
+                    }));
+                    changeParameters(currentMessage, newParameters);
+                  }}
+                >
+                  <RefreshCcw className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Reset all parameters</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
       </div>
       <div className="flex h-[calc(100%-3.5rem)] flex-col justify-between overflow-hidden">
         <ScrollArea className="flex-1 px-6 py-6">
@@ -137,6 +145,7 @@ export function ParameterSection() {
                 key={param.name}
                 param={param}
                 handleCommit={handleCommit}
+                disabled={isReadOnly}
               />
             ))}
           </div>

@@ -12,9 +12,11 @@ import { Label } from '@/components/ui/label';
 export function ParameterInput({
   param,
   handleCommit,
+  disabled = false,
 }: {
   param: Parameter;
   handleCommit: (param: Parameter, value: Parameter['value']) => void;
+  disabled?: boolean;
 }) {
   const [paramState, setParamState] = useState<Parameter>(param);
 
@@ -51,13 +53,15 @@ export function ParameterInput({
             param={paramState}
             onValueChange={handleValueChange}
             onValueCommit={handleValueCommit}
+            disabled={disabled}
           />
           <div className="flex flex-shrink-0 items-center gap-2">
             <Input
               id={paramState.name}
               name={paramState.name}
               autoComplete="off"
-              className="h-6 w-14 rounded-lg bg-adam-neutral-800 px-2 text-left text-xs text-adam-text-primary transition-colors selection:bg-adam-blue/50 selection:text-white focus:outline-none [@media(hover:hover)]:hover:bg-adam-neutral-700"
+              disabled={disabled}
+              className="h-6 w-14 rounded-lg bg-adam-neutral-800 px-2 text-left text-xs text-adam-text-primary transition-colors selection:bg-adam-blue/50 selection:text-white focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 [@media(hover:hover)]:hover:bg-adam-neutral-700"
               value={String(paramState.value)}
               onKeyDown={onEnter}
               onChange={(e) => handleValueChange(e.target.value)}
@@ -90,6 +94,7 @@ export function ParameterInput({
           name={paramState.name}
           checked={Boolean(paramState.value)}
           onCheckedChange={(checked) => handleValueCommit(checked)}
+          disabled={disabled}
         />
       </div>
     );

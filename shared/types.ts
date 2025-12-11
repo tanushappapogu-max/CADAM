@@ -28,6 +28,12 @@ export type Content = {
   index?: number;
   images?: string[];
   mesh?: Mesh;
+  // Auto-generated renders of uploaded STL from multiple angles (for AI analysis)
+  meshRenders?: string[];
+  // Bounding box dimensions of uploaded STL in mm
+  meshBoundingBox?: BoundingBox;
+  // Filename for the uploaded mesh (sanitized, for use in OpenSCAD import())
+  meshFilename?: string;
   // For streaming support - shows in-progress tool calls
   toolCalls?: ToolCall[];
   thinking?: boolean;
@@ -38,6 +44,12 @@ export type MeshFileType = string;
 export type Mesh = {
   id: string;
   fileType: MeshFileType;
+};
+
+export type BoundingBox = {
+  x: number;
+  y: number;
+  z: number;
 };
 
 export type ParametricArtifact = {

@@ -6,7 +6,7 @@ import TextAreaChat from '@/components/TextAreaChat';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { useState, useMemo, useEffect } from 'react';
 import { Content, Model } from '@shared/types';
-import { MessageItem } from '@/types/misc';
+import { MessageItem, MeshUploadState } from '@/types/misc';
 import { cn } from '@/lib/utils';
 import { SelectedItemsContext } from '@/contexts/SelectedItemsContext';
 import { useSendContentMutation } from '@/services/messageService';
@@ -22,6 +22,7 @@ export function PromptView() {
   const [model, setModel] = useState<Model>('google/gemini-3-pro-preview');
   const [isLoaded, setIsLoaded] = useState(false);
   const [images, setImages] = useState<MessageItem[]>([]);
+  const [meshUpload, setMeshUpload] = useState<MeshUploadState | null>(null);
 
   const newConversationId = useMemo(() => {
     return crypto.randomUUID();
@@ -143,7 +144,9 @@ export function PromptView() {
           </div>
           <div className="flex flex-col items-center">
             <div className="w-full max-w-3xl space-y-4 pb-12">
-              <SelectedItemsContext.Provider value={{ images, setImages }}>
+              <SelectedItemsContext.Provider
+                value={{ images, setImages, meshUpload, setMeshUpload }}
+              >
                 <TextAreaChat
                   onSubmit={handleGenerate}
                   conversation={{

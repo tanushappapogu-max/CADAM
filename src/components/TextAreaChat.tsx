@@ -4,8 +4,16 @@ import React, {
   ChangeEvent,
   KeyboardEvent,
   useEffect,
+  useContext,
 } from 'react';
-import { ArrowUp, ImagePlus, Images, Loader2, CircleX } from 'lucide-react';
+import {
+  ArrowUp,
+  ImagePlus,
+  Images,
+  Loader2,
+  CircleX,
+  Box,
+} from 'lucide-react';
 import { cn, PARAMETRIC_MODELS } from '@/lib/utils';
 import { Content, Conversation, Model } from '@shared/types';
 import { MessageItem } from '@/types/misc';
@@ -18,6 +26,8 @@ import { Textarea } from './ui/textarea';
 import { Avatar } from './ui/avatar';
 import { useItemSelection } from '@/hooks/useItemSelection';
 import { AnimatePresence, motion } from 'framer-motion';
+import { processSTL, isValidSTL } from '@/utils/meshUtils';
+import { MeshFilesContext } from '@/contexts/MeshFilesContext';
 
 interface TextAreaChatProps {
   onSubmit: (content: Content) => void;
@@ -55,7 +65,9 @@ function TextAreaChat({
     useState('');
   const prevIsDraggingRef = useRef(isDragging);
   const { toast } = useToast();
-  const { images, setImages } = useItemSelection();
+  const { images, setImages, meshUpload, setMeshUpload } = useItemSelection();
+  // MeshFilesContext is optional (only available in EditorView)
+  const meshFilesContext = useContext(MeshFilesContext);
 
   // Check if current model supports thinking
   const selectedModelConfig = PARAMETRIC_MODELS.find((m) => m.id === model);
@@ -103,22 +115,36 @@ function TextAreaChat({
   }, [placeholder, placeholderAnim]);
 
   const handleSubmit = async () => {
+    // Filter out mesh renders from user images
+    const userImages = images.filter((img) => img.source !== 'mesh-render');
+    const hasMeshProcessing = meshUpload?.isProcessing;
+
     // Debug the early return conditions
-    const hasNoContent = images.length === 0 && !input?.trim();
+    const hasNoContent =
+      userImages.length === 0 && !input?.trim() && !meshUpload;
     const hasUploadingImages = images.some((img) => img.isUploading);
 
-    if (hasNoContent || disabled || hasUploadingImages) {
+    if (hasNoContent || disabled || hasUploadingImages || hasMeshProcessing) {
       return;
     }
+
     const content: Content = {
       ...(input.trim() !== '' && { text: input.trim() }),
-      ...(images.length > 0 && { images: images.map((img) => img.id) }),
+      ...(userImages.length > 0 && { images: userImages.map((img) => img.id) }),
+      // Include mesh data if an STL was uploaded
+      ...(meshUpload && {
+        mesh: { id: meshUpload.id, fileType: 'stl' },
+        meshRenders: meshUpload.renderIds,
+        meshBoundingBox: meshUpload.boundingBox,
+        meshFilename: meshUpload.filename,
+      }),
       model: model,
       thinking: supportsThinking, // Automatically enable thinking for models that support it
     };
     onSubmit(content);
     setInput('');
     setImages([]);
+    setMeshUpload(null);
   };
 
   const { mutateAsync: uploadImageAsync } = useMutation({
@@ -149,6 +175,114 @@ function TextAreaChat({
     },
   });
 
+  // Upload a blob (used for STL renders)
+  const { mutateAsync: uploadBlobAsync } = useMutation({
+    mutationFn: async ({ blob, id }: { blob: Blob; id: string }) => {
+      const { error } = await supabase.storage
+        .from('images')
+        .upload(`${conversation.user_id}/${conversation.id}/${id}`, blob);
+
+      if (error) throw error;
+
+      return URL.createObjectURL(blob);
+    },
+    onError: () => {
+      toast({
+        title: 'Error',
+        description: 'Failed to upload render',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Process and upload an STL file
+  const handleSTLUpload = async (file: File) => {
+    const meshId = crypto.randomUUID();
+    // Sanitize filename for OpenSCAD (remove spaces, special chars)
+    const safeFilename =
+      file.name
+        .toLowerCase()
+        .replace(/[^a-z0-9._-]/g, '_')
+        .replace(/\.stl$/i, '') + '.stl';
+
+    // Set processing state with placeholder values
+    setMeshUpload({
+      id: meshId,
+      filename: safeFilename,
+      boundingBox: { x: 0, y: 0, z: 0 },
+      renderIds: [],
+      isProcessing: true,
+      fileContent: file, // Store the actual file content for OpenSCAD import
+    });
+
+    try {
+      // Process STL to get renders and bounding box
+      const { boundingBox, renders } = await processSTL(file);
+
+      // Upload the STL file to storage (for persistence/sharing)
+      const { error: stlError } = await supabase.storage
+        .from('images')
+        .upload(
+          `${conversation.user_id}/${conversation.id}/mesh-${meshId}.stl`,
+          file,
+        );
+
+      if (stlError) throw stlError;
+
+      // Upload renders and collect their IDs
+      const renderIds: string[] = [];
+      const renderUrls: string[] = [];
+
+      for (let i = 0; i < renders.length; i++) {
+        const renderId = `render-${meshId}-${i}.png`;
+        renderIds.push(renderId);
+
+        const url = await uploadBlobAsync({ blob: renders[i], id: renderId });
+        renderUrls.push(url);
+      }
+
+      // Add render thumbnails to images for display
+      const renderItems: MessageItem[] = renderIds.map((id, index) => ({
+        id,
+        isUploading: false,
+        url: renderUrls[index],
+        source: 'mesh-render' as const,
+        meshId,
+      }));
+
+      setImages((prev) => [...prev, ...renderItems]);
+
+      // Update mesh upload state with final data (keep file content)
+      setMeshUpload({
+        id: meshId,
+        filename: safeFilename,
+        boundingBox,
+        renderIds,
+        isProcessing: false,
+        fileContent: file,
+      });
+
+      // Store mesh file in context for OpenSCAD import (if context available)
+      if (meshFilesContext) {
+        meshFilesContext.setMeshFile(safeFilename, file);
+      }
+
+      toast({
+        title: '3D model ready',
+        description: `${safeFilename} (${boundingBox.x.toFixed(1)} × ${boundingBox.y.toFixed(1)} × ${boundingBox.z.toFixed(1)} mm)`,
+      });
+    } catch (error) {
+      console.error('Error processing STL:', error);
+      setMeshUpload(null);
+      toast({
+        title: 'Error processing 3D model',
+        description:
+          error instanceof Error ? error.message : 'Failed to process STL file',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const addItems = async (files: FileList) => {
     const newItems = Array.from(files);
     let hasSmallImages = false;
@@ -156,8 +290,40 @@ function TextAreaChat({
     let hasInvalidImages = false;
     const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB limit
 
+    // Separate STL files from images
+    const stlFiles: File[] = [];
+    const imageFiles: File[] = [];
+
+    for (const file of newItems) {
+      if (isValidSTL(file)) {
+        stlFiles.push(file);
+      } else {
+        imageFiles.push(file);
+      }
+    }
+
+    // Handle STL files (only allow one at a time for now)
+    if (stlFiles.length > 0) {
+      if (meshUpload) {
+        toast({
+          title: 'Only one 3D model at a time',
+          description: 'Please remove the current model before adding another.',
+        });
+      } else {
+        // Process first STL file
+        handleSTLUpload(stlFiles[0]);
+        if (stlFiles.length > 1) {
+          toast({
+            title: 'Multiple 3D models',
+            description: 'Only the first STL file was added.',
+          });
+        }
+      }
+    }
+
+    // Process image files
     const validImages = await Promise.all(
-      newItems.map(async (file) => {
+      imageFiles.map(async (file) => {
         // First check file type Must be jpeg, png, gif, or webp.
         if (!file.type.includes('image')) {
           return null;
@@ -295,6 +461,30 @@ function TextAreaChat({
 
   const handleImageRemoved = async (image: MessageItem) => {
     if (!image.isUploading) {
+      // If this is a mesh render, clear the entire mesh upload
+      if (image.source === 'mesh-render' && image.meshId) {
+        try {
+          // Remove all renders and the STL file
+          const pathsToRemove = [
+            `${conversation.user_id}/${conversation.id}/mesh-${image.meshId}.stl`,
+            ...images
+              .filter((img) => img.meshId === image.meshId)
+              .map(
+                (img) => `${conversation.user_id}/${conversation.id}/${img.id}`,
+              ),
+          ];
+          await supabase.storage.from('images').remove(pathsToRemove);
+        } catch (error) {
+          console.error('Error removing mesh files:', error);
+        }
+        // Remove all renders for this mesh from images
+        setImages((prevImages) =>
+          prevImages.filter((img) => img.meshId !== image.meshId),
+        );
+        setMeshUpload(null);
+        return;
+      }
+
       // Only try to remove from storage if the item has been uploaded
       if (image.source === 'upload') {
         try {
@@ -538,9 +728,19 @@ function TextAreaChat({
                       >
                         <img
                           src={image.url}
-                          alt="Image"
+                          alt={
+                            image.source === 'mesh-render'
+                              ? '3D Model View'
+                              : 'Image'
+                          }
                           className="h-12 w-12 rounded-md object-cover"
                         />
+                        {/* Show 3D icon badge for mesh renders */}
+                        {image.source === 'mesh-render' && (
+                          <div className="absolute bottom-0 left-0 rounded-br-md rounded-tl-md bg-adam-blue/80 p-0.5">
+                            <Box className="h-3 w-3 text-white" />
+                          </div>
+                        )}
                         {image.isUploading && (
                           <div className="absolute inset-0 flex items-center justify-center rounded-md bg-black/50">
                             <Loader2 className="h-4 w-4 animate-spin text-white" />
@@ -652,7 +852,8 @@ function TextAreaChat({
                   e.stopPropagation();
                   const input = document.createElement('input');
                   input.type = 'file';
-                  input.accept = VALID_IMAGE_FORMATS.join(', ');
+                  input.accept = [...VALID_IMAGE_FORMATS, '.stl'].join(', ');
+                  input.multiple = true;
                   input.onchange = (event) => {
                     handleItemsChange(
                       event as unknown as ChangeEvent<HTMLInputElement>,
@@ -660,9 +861,13 @@ function TextAreaChat({
                   };
                   input.click();
                 }}
-                disabled={disabled}
+                disabled={disabled || meshUpload?.isProcessing}
               >
-                <ImagePlus className="h-5 w-5" />
+                {meshUpload?.isProcessing ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <ImagePlus className="h-5 w-5" />
+                )}
               </Button>
             </div>
           </div>
@@ -682,11 +887,17 @@ function TextAreaChat({
               }}
               className={cn(
                 'flex h-8 w-8 transform items-center justify-center rounded-lg bg-adam-neutral-700 p-1 text-white transition-all duration-300 hover:scale-105 hover:bg-adam-blue/90 disabled:opacity-50 disabled:hover:scale-100 disabled:hover:bg-adam-blue',
-                images.some((img) => img.isUploading) && 'opacity-50',
+                (images.some((img) => img.isUploading) ||
+                  meshUpload?.isProcessing) &&
+                  'opacity-50',
               )}
               disabled={
-                (images.length === 0 && !input?.trim()) ||
+                (images.filter((img) => img.source !== 'mesh-render').length ===
+                  0 &&
+                  !input?.trim() &&
+                  !meshUpload) ||
                 images.some((img) => img.isUploading) ||
+                meshUpload?.isProcessing ||
                 disabled
               }
             >

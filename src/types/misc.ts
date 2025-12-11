@@ -25,5 +25,17 @@ export interface MessageItem {
   id: string;
   isUploading?: boolean;
   url?: string;
-  source: 'upload' | 'selection';
+  source: 'upload' | 'selection' | 'mesh-render';
+  // For mesh renders, track which mesh they belong to
+  meshId?: string;
+}
+
+export interface MeshUploadState {
+  id: string;
+  filename: string; // Original filename for display/reference
+  boundingBox: { x: number; y: number; z: number };
+  renderIds: string[];
+  isProcessing: boolean;
+  // The actual STL file content for OpenSCAD import
+  fileContent: Blob;
 }

@@ -16,7 +16,8 @@ file_size_limit = "50MiB"
 [storage.buckets.images]
 public = false
 file_size_limit = "50MiB"
-allowed_mime_types = ["image/png", "image/jpeg", "image/jpg", "image/webp"]
+# Allow images and STL files (STL often comes as application/octet-stream)
+allowed_mime_types = ["image/png", "image/jpeg", "image/jpg", "image/webp", "model/stl", "application/sla", "application/octet-stream"]
 
 [auth]
 enable_anonymous_sign_ins = true

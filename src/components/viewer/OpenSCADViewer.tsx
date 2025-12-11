@@ -1,5 +1,5 @@
 import { useOpenSCAD } from '@/hooks/useOpenSCAD';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
 import { ThreeScene } from '@/components/viewer/ThreeScene';
 import { STLLoader } from 'three/addons/loaders/STLLoader.js';
 import { BufferGeometry } from 'three';
@@ -12,22 +12,64 @@ import { useCurrentMessage } from '@/contexts/CurrentMessageContext';
 import { Content } from '@shared/types';
 import { useSendContentMutation } from '@/services/messageService';
 import { useBlob } from '@/contexts/BlobContext';
+import { useMeshFiles } from '@/contexts/MeshFilesContext';
+
+// Extract import() filenames from OpenSCAD code
+function extractImportFilenames(code: string): string[] {
+  const importRegex = /import\s*\(\s*"([^"]+)"\s*\)/g;
+  const filenames: string[] = [];
+  let match;
+  while ((match = importRegex.exec(code)) !== null) {
+    filenames.push(match[1]);
+  }
+  return filenames;
+}
 
 export function OpenSCADViewer() {
   const { conversation } = useConversation();
   const { currentMessage } = useCurrentMessage();
   const { setBlob } = useBlob();
-  const { compileScad, isCompiling, output, isError, error } = useOpenSCAD();
+  const {
+    compileScad,
+    writeFile,
+    hasFile,
+    isCompiling,
+    output,
+    isError,
+    error,
+  } = useOpenSCAD();
+  const { getMeshFile, hasMeshFile } = useMeshFiles();
   const [geometry, setGeometry] = useState<BufferGeometry | null>(null);
   const { mutate: sendMessage } = useSendContentMutation({ conversation });
+  // Track which files we've written to avoid re-writing
+  const writtenFilesRef = useRef<Set<string>>(new Set());
 
   const scadCode = currentMessage?.content.artifact?.code;
 
   useEffect(() => {
-    if (scadCode) {
+    if (!scadCode) return;
+
+    const compileWithMeshFiles = async () => {
+      // Extract any import() filenames from the code
+      const importedFiles = extractImportFilenames(scadCode);
+
+      // Write any mesh files that haven't been written yet
+      for (const filename of importedFiles) {
+        if (!writtenFilesRef.current.has(filename) && hasMeshFile(filename)) {
+          const meshContent = getMeshFile(filename);
+          if (meshContent) {
+            await writeFile(filename, meshContent);
+            writtenFilesRef.current.add(filename);
+          }
+        }
+      }
+
+      // Now compile the code
       compileScad(scadCode);
-    }
-  }, [scadCode, compileScad]);
+    };
+
+    compileWithMeshFiles();
+  }, [scadCode, compileScad, writeFile, hasFile, getMeshFile, hasMeshFile]);
 
   useEffect(() => {
     setBlob(output ?? null);

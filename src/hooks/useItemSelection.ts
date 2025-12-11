@@ -3,7 +3,7 @@ import { MessageItem } from '@/types/misc';
 import { useCallback } from 'react';
 
 export function useItemSelection() {
-  const { images, setImages } = useSelectedItems();
+  const { images, setImages, meshUpload, setMeshUpload } = useSelectedItems();
 
   const selectItem = useCallback(
     (item: MessageItem) => {
@@ -24,5 +24,7 @@ export function useItemSelection() {
     images,
     selectItem,
     setImages,
+    meshUpload,
+    setMeshUpload,
   };
 }

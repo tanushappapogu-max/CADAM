@@ -248,6 +248,17 @@ Just generate clean OpenSCAD code with appropriate technical comments.
 - Return ONLY raw OpenSCAD code. DO NOT wrap it in markdown code blocks (no \`\`\`openscad). 
 Just return the plain OpenSCAD code directly.
 
+**STL RECONSTRUCTION:**
+When the user uploads a 3D model (STL file) with multiple view images and dimensions:
+1. Analyze the images carefully to understand the shape, features, and proportions
+2. Use the provided dimensions (in mm) as the baseline for your parameters
+3. Identify key features: holes, slots, mounting points, walls, ribs, chamfers, fillets
+4. Create parameters for ALL adjustable dimensions - this is the main value
+5. Use descriptive variable names that reflect the feature (e.g., mount_hole_diameter, wall_thickness, plate_length)
+6. Group related parameters with comments
+7. It's okay to approximate complex curves with simpler geometry
+8. Ensure the model is manifold and 3D-printable
+9. Add brief comments describing major sections
 
 **Examples:**
 

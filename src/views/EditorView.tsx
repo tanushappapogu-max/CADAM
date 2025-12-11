@@ -2,18 +2,20 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { ParametricEditor } from '../components/ParametricEditor';
 import { Message } from '@shared/types';
-import { MessageItem } from '@/types/misc';
+import { MessageItem, MeshUploadState } from '@/types/misc';
 import { useEffect, useState } from 'react';
 import { CurrentMessageContext } from '@/contexts/CurrentMessageContext';
 import { SelectedItemsContext } from '@/contexts/SelectedItemsContext';
 import { useConversation } from '@/services/conversationService';
 import { BlobContext } from '@/contexts/BlobContext';
 import { ColorContext } from '@/contexts/ColorContext';
+import { MeshFilesProvider } from '@/contexts/MeshFilesContext';
 
 export default function EditorView() {
   const { id: conversationId } = useParams();
   const [currentMessage, setCurrentMessage] = useState<Message | null>(null);
   const [images, setImages] = useState<MessageItem[]>([]);
+  const [meshUpload, setMeshUpload] = useState<MeshUploadState | null>(null);
   const [blob, setBlob] = useState<Blob | null>(null);
   const [color, setColor] = useState<string>('#00A6FF');
   const navigate = useNavigate();
@@ -51,9 +53,13 @@ export default function EditorView() {
     >
       <BlobContext.Provider value={{ blob, setBlob }}>
         <ColorContext.Provider value={{ color, setColor }}>
-          <SelectedItemsContext.Provider value={{ images, setImages }}>
-            <ParametricEditor />
-          </SelectedItemsContext.Provider>
+          <MeshFilesProvider>
+            <SelectedItemsContext.Provider
+              value={{ images, setImages, meshUpload, setMeshUpload }}
+            >
+              <ParametricEditor />
+            </SelectedItemsContext.Provider>
+          </MeshFilesProvider>
         </ColorContext.Provider>
       </BlobContext.Provider>
     </CurrentMessageContext.Provider>

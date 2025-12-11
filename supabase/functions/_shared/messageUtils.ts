@@ -156,6 +156,80 @@ export async function formatUserMessage(
     }
   }
 
+  // Handle STL mesh uploads with auto-generated renders
+  if (message.content.meshRenders?.length && message.content.meshBoundingBox) {
+    const bbox = message.content.meshBoundingBox;
+    const filename = message.content.meshFilename || 'model.stl';
+    const renderFiles = message.content.meshRenders.map(
+      (renderId) => `${userId}/${conversationId}/${renderId}`,
+    );
+    const base64Renders = await getBase64Images(
+      supabaseClient,
+      'images',
+      renderFiles,
+    );
+
+    if (base64Renders.length > 0) {
+      // Default: import the STL and apply modifications
+      // The user's STL will be loaded into OpenSCAD's filesystem as "${filename}"
+      const instruction = `User uploaded a 3D model (STL file): "${filename}"
+DIMENSIONS: ${bbox.x.toFixed(1)}mm × ${bbox.y.toFixed(1)}mm × ${bbox.z.toFixed(1)}mm
+
+YOU MUST USE import("${filename}") TO INCLUDE THE USER'S MODEL.
+
+Generate OpenSCAD code that:
+1. Imports the user's STL using: import("${filename}");
+2. Applies the requested modifications (holes, cuts, extensions, etc.)
+3. Creates parameters for ALL modification dimensions
+
+EXAMPLE STRUCTURE:
+// Parameters for modifications
+hole_diameter = 10; // [1:50]
+hole_depth = 20; // [1:100]
+hole_x_position = 0; // [-50:50]
+hole_y_position = 0; // [-50:50]
+
+difference() {
+    import("${filename}");
+    // Add holes, cuts, or other modifications here
+    translate([hole_x_position, hole_y_position, 0])
+        cylinder(h=hole_depth, d=hole_diameter, center=true, $fn=32);
+}
+
+If the user wants to ADD material (stand, mount, extension), use union() instead of difference().
+If no specific modification is requested, just wrap in a simple parametric transform:
+
+// Transform parameters
+scale_factor = 1.0; // [0.1:0.1:5]
+rotate_z = 0; // [0:360]
+
+rotate([0, 0, rotate_z])
+scale([scale_factor, scale_factor, scale_factor])
+import("${filename}");
+
+The following images show the model from different angles (isometric, top, front, right):`;
+
+      parts.push({
+        type: 'text',
+        text: instruction,
+      });
+      parts.push(
+        ...base64Renders.map((image) => ({
+          type: 'image' as const,
+          source: {
+            type: 'base64' as const,
+            media_type: image.mediaType as
+              | 'image/jpeg'
+              | 'image/png'
+              | 'image/gif'
+              | 'image/webp',
+            data: image.data.split(',')[1],
+          },
+        })),
+      );
+    }
+  }
+
   return { role: 'user', content: parts };
 }
 

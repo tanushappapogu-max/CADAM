@@ -170,33 +170,44 @@ export async function formatUserMessage(
     );
 
     if (base64Renders.length > 0) {
-      // The renders were generated with rotation_x = -90 degrees applied
-      // This is the rotation needed to make most STLs appear upright
+      // Calculate model height after rotation (Y becomes Z when rotated 90 degrees on X)
+      const modelHeight = bbox.y;
+      const modelWidth = bbox.x;
+      const modelDepth = bbox.z;
+
       const instruction = `User uploaded a 3D model (STL file): "${filename}"
-DIMENSIONS: ${bbox.x.toFixed(1)}mm × ${bbox.y.toFixed(1)}mm × ${bbox.z.toFixed(1)}mm
+
+**MODEL DIMENSIONS (CRITICAL FOR POSITIONING):**
+- Width (X): ${modelWidth.toFixed(1)}mm
+- Height (Z after rotation): ${modelHeight.toFixed(1)}mm  
+- Depth (Y after rotation): ${modelDepth.toFixed(1)}mm
+
+The model is CENTERED at origin. After rotation:
+- TOP of model is at Z = +${(modelHeight / 2).toFixed(1)}mm
+- BOTTOM of model is at Z = -${(modelHeight / 2).toFixed(1)}mm
 
 YOU MUST USE import("${filename}") TO INCLUDE THE USER'S MODEL.
 
-**ORIENTATION FIX (CRITICAL):**
-The render images show the model standing upright.
-To make the imported STL stand upright like in the renders, use rotation_x = 90.
+**POSITIONING OBJECTS (CRITICAL):**
+- To place something ON TOP (like a hat): translate to Z = ${(modelHeight / 2).toFixed(1)} or higher
+- To place something BELOW (like a stand): translate to Z = -${(modelHeight / 2).toFixed(1)} or lower
+- Objects should NOT intersect the model unless cutting with difference()
 
-REQUIRED CODE STRUCTURE:
-// Orientation (90 degrees to stand upright)
-rotation_x = 90; // [-180:180] USE 90 TO STAND UPRIGHT
-rotation_y = 0;   // [-180:180]
-rotation_z = 0;   // [-180:180]
+**ORIENTATION:**
+Use rotation_x = 90 to stand the model upright (matching the render images).
 
-// Then your modification parameters
-stand_height = 5;
-stand_diameter = 40;
+EXAMPLE - Adding a hat on top:
+rotation_x = 90;
+rotation_y = 0;
+rotation_z = 0;
+hat_pos_z = ${(modelHeight / 2 + 5).toFixed(0)}; // Above model top
 $fn = 64;
 
 union() {
     rotate([rotation_x, rotation_y, rotation_z])
         import("${filename}");
-    translate([0, 0, -stand_height])
-        cylinder(h=stand_height, d=stand_diameter);
+    translate([0, 0, hat_pos_z])
+        cylinder(h=10, d1=20, d2=5); // Hat above the model
 }
 
 The images show the model from: isometric, top, front, right views:`;

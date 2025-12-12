@@ -219,7 +219,7 @@ class OpenSCADWrapper {
     console.log(`[Worker] writeFile called for "${data.path}"`);
 
     // Filter out any existing file with the same path
-    this.files = this.files.filter((file) => file.name !== data.path);
+    this.files = this.files.filter((file) => file.path !== data.path);
 
     // Only add the file if content exists
     if (data.content) {
@@ -252,7 +252,7 @@ class OpenSCADWrapper {
   async readFile(
     data: FileSystemWorkerMessageData,
   ): Promise<FileSystemWorkerMessageData> {
-    const found = this.files.find((file) => file.name === data.path);
+    const found = this.files.find((file) => file.path === data.path);
 
     return {
       path: data.path,
@@ -261,7 +261,7 @@ class OpenSCADWrapper {
   }
 
   async unlinkFile(data: FileSystemWorkerMessageData) {
-    this.files = this.files.filter((file) => file.name !== data.path);
+    this.files = this.files.filter((file) => file.path !== data.path);
 
     return true; // TODO `boolean` might not be the best thing to return here
   }

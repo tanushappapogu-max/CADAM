@@ -124,9 +124,11 @@ async function renderMultipleAngles(
 
   // Calculate camera distance based on bounding box
   const maxDim = Math.max(boundingBox.x, boundingBox.y, boundingBox.z);
-  const cameraDistance = maxDim * 2.5;
+  // Ensure we have a valid dimension (fallback to 1 for degenerate geometry)
+  const safeDim = maxDim > 0 ? maxDim : 1;
+  const cameraDistance = safeDim * 2.5;
 
-  const camera = new THREE.PerspectiveCamera(45, 1, 0.1, maxDim * 10);
+  const camera = new THREE.PerspectiveCamera(45, 1, 0.1, safeDim * 10);
 
   try {
     for (const angle of cameraAngles) {

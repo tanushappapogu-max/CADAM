@@ -149,7 +149,7 @@ export function useOpenSCAD() {
       setIsError(false);
 
       const worker = getWorker();
-      worker.addEventListener('message', eventHandler);
+      // Note: Event listener is already added in useEffect, no need to add again
 
       const message: WorkerMessage = {
         type: WorkerMessageType.PREVIEW,
@@ -162,7 +162,7 @@ export function useOpenSCAD() {
 
       worker.postMessage(message);
     },
-    [eventHandler, getWorker],
+    [getWorker],
   );
 
   return {

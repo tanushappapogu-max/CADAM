@@ -223,11 +223,24 @@ class OpenSCADWrapper {
 
     // Only add the file if content exists
     if (data.content) {
-      // Ensure the path is set before adding
-      if (!data.content.path) {
-        data.content.path = data.path;
+      let workspaceFile: WorkspaceFile;
+
+      if (data.content instanceof ArrayBuffer) {
+        // Reconstruct WorkspaceFile from transferred ArrayBuffer
+        workspaceFile = new WorkspaceFile([data.content], data.path, {
+          path: data.path,
+          type: data.type || 'application/octet-stream',
+        });
+      } else {
+        // Assume it's already a WorkspaceFile/File (legacy path)
+        workspaceFile = data.content as WorkspaceFile;
       }
-      this.files.push(data.content);
+
+      // Ensure the path is set before adding
+      if (!workspaceFile.path) {
+        workspaceFile.path = data.path;
+      }
+      this.files.push(workspaceFile);
       console.log(
         `[Worker] File stored: "${data.path}", total files: ${this.files.length}`,
       );

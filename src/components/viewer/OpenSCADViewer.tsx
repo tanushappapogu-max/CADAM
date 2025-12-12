@@ -52,12 +52,22 @@ export function OpenSCADViewer() {
     const compileWithMeshFiles = async () => {
       // Extract any import() filenames from the code
       const importedFiles = extractImportFilenames(scadCode);
+      console.log('[OpenSCAD] Code has imports:', importedFiles);
 
       // Write any mesh files that haven't been written yet
       for (const filename of importedFiles) {
-        if (!writtenFilesRef.current.has(filename) && hasMeshFile(filename)) {
+        const inContext = hasMeshFile(filename);
+        const alreadyWritten = writtenFilesRef.current.has(filename);
+        console.log(
+          `[OpenSCAD] File "${filename}": inContext=${inContext}, written=${alreadyWritten}`,
+        );
+
+        if (!alreadyWritten && inContext) {
           const meshContent = getMeshFile(filename);
           if (meshContent) {
+            console.log(
+              `[OpenSCAD] Writing "${filename}" to worker (${meshContent.size} bytes)`,
+            );
             await writeFile(filename, meshContent);
             writtenFilesRef.current.add(filename);
           }
@@ -65,6 +75,7 @@ export function OpenSCADViewer() {
       }
 
       // Now compile the code
+      console.log('[OpenSCAD] Compiling...');
       compileScad(scadCode);
     };
 

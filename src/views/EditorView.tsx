@@ -9,7 +9,6 @@ import { SelectedItemsContext } from '@/contexts/SelectedItemsContext';
 import { useConversation } from '@/services/conversationService';
 import { BlobContext } from '@/contexts/BlobContext';
 import { ColorContext } from '@/contexts/ColorContext';
-import { MeshFilesProvider } from '@/contexts/MeshFilesContext';
 
 export default function EditorView() {
   const { id: conversationId } = useParams();
@@ -53,13 +52,11 @@ export default function EditorView() {
     >
       <BlobContext.Provider value={{ blob, setBlob }}>
         <ColorContext.Provider value={{ color, setColor }}>
-          <MeshFilesProvider>
-            <SelectedItemsContext.Provider
-              value={{ images, setImages, meshUpload, setMeshUpload }}
-            >
-              <ParametricEditor />
-            </SelectedItemsContext.Provider>
-          </MeshFilesProvider>
+          <SelectedItemsContext.Provider
+            value={{ images, setImages, meshUpload, setMeshUpload }}
+          >
+            <ParametricEditor />
+          </SelectedItemsContext.Provider>
         </ColorContext.Provider>
       </BlobContext.Provider>
     </CurrentMessageContext.Provider>

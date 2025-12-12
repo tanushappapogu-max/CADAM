@@ -6,6 +6,7 @@ import { Sidebar } from '@/components/Sidebar';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
+import { MeshFilesProvider } from '@/contexts/MeshFilesContext';
 
 export default function App() {
   const { isLoading } = useAuth();
@@ -65,7 +66,9 @@ export default function App() {
               <PanelLeft className="h-4 w-4" />
             </Button>
             <div className="h-full bg-adam-bg-dark">
-              <Outlet context={{ isSidebarOpen }} />
+              <MeshFilesProvider>
+                <Outlet context={{ isSidebarOpen }} />
+              </MeshFilesProvider>
             </div>
           </div>
         </div>

@@ -170,44 +170,36 @@ export async function formatUserMessage(
     );
 
     if (base64Renders.length > 0) {
-      // Default: import the STL and apply modifications
-      // The user's STL will be loaded into OpenSCAD's filesystem as "${filename}"
+      // The renders were generated with rotation_x = -90 degrees applied
+      // This is the rotation needed to make most STLs appear upright
       const instruction = `User uploaded a 3D model (STL file): "${filename}"
 DIMENSIONS: ${bbox.x.toFixed(1)}mm × ${bbox.y.toFixed(1)}mm × ${bbox.z.toFixed(1)}mm
 
 YOU MUST USE import("${filename}") TO INCLUDE THE USER'S MODEL.
 
-Generate OpenSCAD code that:
-1. Imports the user's STL using: import("${filename}");
-2. Applies the requested modifications (holes, cuts, extensions, etc.)
-3. Creates parameters for ALL modification dimensions
+**ORIENTATION FIX (CRITICAL):**
+The render images show the model standing upright.
+To make the imported STL stand upright like in the renders, use rotation_x = 90.
 
-EXAMPLE STRUCTURE:
-// Parameters for modifications
-hole_diameter = 10; // [1:50]
-hole_depth = 20; // [1:100]
-hole_x_position = 0; // [-50:50]
-hole_y_position = 0; // [-50:50]
+REQUIRED CODE STRUCTURE:
+// Orientation (90 degrees to stand upright)
+rotation_x = 90; // [-180:180] USE 90 TO STAND UPRIGHT
+rotation_y = 0;   // [-180:180]
+rotation_z = 0;   // [-180:180]
 
-difference() {
-    import("${filename}");
-    // Add holes, cuts, or other modifications here
-    translate([hole_x_position, hole_y_position, 0])
-        cylinder(h=hole_depth, d=hole_diameter, center=true, $fn=32);
+// Then your modification parameters
+stand_height = 5;
+stand_diameter = 40;
+$fn = 64;
+
+union() {
+    rotate([rotation_x, rotation_y, rotation_z])
+        import("${filename}");
+    translate([0, 0, -stand_height])
+        cylinder(h=stand_height, d=stand_diameter);
 }
 
-If the user wants to ADD material (stand, mount, extension), use union() instead of difference().
-If no specific modification is requested, just wrap in a simple parametric transform:
-
-// Transform parameters
-scale_factor = 1.0; // [0.1:0.1:5]
-rotate_z = 0; // [0:360]
-
-rotate([0, 0, rotate_z])
-scale([scale_factor, scale_factor, scale_factor])
-import("${filename}");
-
-The following images show the model from different angles (isometric, top, front, right):`;
+The images show the model from: isometric, top, front, right views:`;
 
       parts.push({
         type: 'text',

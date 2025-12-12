@@ -266,11 +266,6 @@ function TextAreaChat({
       if (meshFilesContext) {
         meshFilesContext.setMeshFile(safeFilename, file);
       }
-
-      toast({
-        title: '3D model ready',
-        description: `${safeFilename} (${boundingBox.x.toFixed(1)} × ${boundingBox.y.toFixed(1)} × ${boundingBox.z.toFixed(1)} mm)`,
-      });
     } catch (error) {
       console.error('Error processing STL:', error);
       setMeshUpload(null);

@@ -57,6 +57,9 @@ class OpenSCADWrapper {
       console.error('Error setting up fonts', error);
     }
 
+    console.log(
+      `[Worker] getInstance: writing ${this.files.length} files to OpenSCAD FS`,
+    );
     for (const file of this.files) {
       // Make sure the directory of the file exists
       if (file.path) {
@@ -69,6 +72,9 @@ class OpenSCADWrapper {
         }
 
         const content = await file.arrayBuffer();
+        console.log(
+          `[Worker] Writing to FS: "${file.path}" (${content.byteLength} bytes)`,
+        );
         instance.FS.writeFile(file.path, new Int8Array(content));
       }
     }
@@ -210,6 +216,8 @@ class OpenSCADWrapper {
     // a number as an error, we cannot use a persistent instance of OpenSCAD. Instead,
     // we have to create a new instance every time we want to use OpenSCAD. That is
     // why the files are stored in this class, instead of written to the FS of OpenSCAD.
+    console.log(`[Worker] writeFile called for "${data.path}"`);
+
     // Filter out any existing file with the same path
     this.files = this.files.filter((file) => file.name !== data.path);
 
@@ -220,9 +228,12 @@ class OpenSCADWrapper {
         data.content.path = data.path;
       }
       this.files.push(data.content);
+      console.log(
+        `[Worker] File stored: "${data.path}", total files: ${this.files.length}`,
+      );
     }
 
-    return true; // TODO `boolean` might not be the best thing to return here
+    return true;
   }
 
   async readFile(

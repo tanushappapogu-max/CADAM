@@ -20,6 +20,7 @@ export function MeshFilesProvider({ children }: { children: React.ReactNode }) {
   const meshFilesRef = useRef<Map<string, Blob>>(new Map());
 
   const setMeshFile = useCallback((filename: string, content: Blob) => {
+    console.log(`[MeshFiles] Storing: "${filename}" (${content.size} bytes)`);
     meshFilesRef.current.set(filename, content);
   }, []);
 

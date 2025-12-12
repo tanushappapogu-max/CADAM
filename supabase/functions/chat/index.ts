@@ -181,7 +181,6 @@ Simply say what you're doing in natural language (e.g., "I'll create that for yo
 
 Guidelines:
 - When the user requests a new part or structural change, call build_parametric_model with their exact request in the text field.
-- You have access to BOSL2 and MCAD libraries. Use them for complex shapes (gears, screws, etc.).
 - When the user asks for simple parameter tweaks (like "height to 80"), call apply_parameter_changes.
 - Keep text concise and helpful. Ask at most 1 follow-up question when truly needed.
 - Pass the user's request directly to the tool without modification (e.g., if user says "a mug", pass "a mug" to build_parametric_model).`;

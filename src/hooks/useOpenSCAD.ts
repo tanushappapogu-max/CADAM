@@ -3,6 +3,12 @@ import { WorkerMessage, WorkerMessageType } from '@/worker/types';
 import OpenSCADError from '@/lib/OpenSCADError';
 import WorkspaceFile from '@/lib/WorkspaceFile';
 
+// Type for pending request resolvers
+type PendingRequest = {
+  resolve: (value: unknown) => void;
+  reject: (error: Error) => void;
+};
+
 export function useOpenSCAD() {
   const [isCompiling, setIsCompiling] = useState(false);
   const [error, setError] = useState<OpenSCADError | Error | undefined>();
@@ -11,6 +17,8 @@ export function useOpenSCAD() {
   const workerRef = useRef<Worker | null>(null);
   // Track files written to the worker filesystem
   const writtenFilesRef = useRef<Set<string>>(new Set());
+  // Track pending requests waiting for worker responses
+  const pendingRequestsRef = useRef<Map<string, PendingRequest>>(new Map());
 
   const getWorker = useCallback(() => {
     if (!workerRef.current) {
@@ -23,13 +31,28 @@ export function useOpenSCAD() {
   }, []);
 
   const eventHandler = useCallback((event: MessageEvent) => {
-    // Only handle preview/export responses, not fs operations
+    const { id, type, err } = event.data;
+
+    // Check if this is a response to a pending request (fs operations)
+    if (id && pendingRequestsRef.current.has(id)) {
+      const pending = pendingRequestsRef.current.get(id)!;
+      pendingRequestsRef.current.delete(id);
+
+      if (err) {
+        pending.reject(new Error(err.message || 'Worker operation failed'));
+      } else {
+        pending.resolve(event.data.data);
+      }
+      return;
+    }
+
+    // Handle preview/export responses (state-based)
     if (
-      event.data.type === WorkerMessageType.PREVIEW ||
-      event.data.type === WorkerMessageType.EXPORT
+      type === WorkerMessageType.PREVIEW ||
+      type === WorkerMessageType.EXPORT
     ) {
-      if (event.data.err) {
-        setError(event.data.err);
+      if (err) {
+        setError(err);
         setIsError(true);
         setOutput(undefined);
       } else if (event.data.data?.output) {
@@ -51,10 +74,16 @@ export function useOpenSCAD() {
       workerRef.current?.terminate();
       workerRef.current = null;
       writtenFilesRef.current.clear();
+      // Reject any pending requests on cleanup
+      pendingRequestsRef.current.forEach((pending) => {
+        pending.reject(new Error('Worker terminated'));
+      });
+      pendingRequestsRef.current.clear();
     };
   }, [eventHandler, getWorker]);
 
   // Write a file to the OpenSCAD worker filesystem
+  // Returns a promise that resolves when the worker confirms the write
   const writeFile = useCallback(
     async (path: string, content: Blob | File): Promise<void> => {
       const worker = getWorker();
@@ -66,7 +95,19 @@ export function useOpenSCAD() {
         type: content.type,
       });
 
-      const message: WorkerMessage = {
+      // Generate unique ID for this request
+      const requestId = `fs-write-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+      // Create promise that will resolve when worker responds
+      const responsePromise = new Promise<void>((resolve, reject) => {
+        pendingRequestsRef.current.set(requestId, {
+          resolve: () => resolve(),
+          reject,
+        });
+      });
+
+      const message: WorkerMessage & { id: string } = {
+        id: requestId,
         type: WorkerMessageType.FS_WRITE,
         data: {
           path,
@@ -75,6 +116,9 @@ export function useOpenSCAD() {
       };
 
       worker.postMessage(message);
+
+      // Wait for worker to confirm the write
+      await responsePromise;
       writtenFilesRef.current.add(path);
     },
     [getWorker],

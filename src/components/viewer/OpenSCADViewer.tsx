@@ -51,40 +51,44 @@ export function OpenSCADViewer() {
     if (!scadCode) return;
 
     const compileWithMeshFiles = async () => {
-      // Extract any import() filenames from the code
-      const importedFiles = extractImportFilenames(scadCode);
-      console.log('[OpenSCAD] Code has imports:', importedFiles);
+      try {
+        // Extract any import() filenames from the code
+        const importedFiles = extractImportFilenames(scadCode);
+        console.log('[OpenSCAD] Code has imports:', importedFiles);
 
-      // Write any mesh files that haven't been written yet
-      for (const filename of importedFiles) {
-        const inContext = hasMeshFile(filename);
-        const meshContent = getMeshFile(filename);
+        // Write any mesh files that haven't been written yet
+        for (const filename of importedFiles) {
+          const inContext = hasMeshFile(filename);
+          const meshContent = getMeshFile(filename);
 
-        // Check if we need to write:
-        // 1. File exists in context
-        // 2. We haven't written it OR the content has changed (new Blob reference)
-        const writtenBlob = writtenFilesRef.current.get(filename);
-        const needsWrite =
-          inContext &&
-          meshContent &&
-          (!writtenBlob || writtenBlob !== meshContent);
+          // Check if we need to write:
+          // 1. File exists in context
+          // 2. We haven't written it OR the content has changed (new Blob reference)
+          const writtenBlob = writtenFilesRef.current.get(filename);
+          const needsWrite =
+            inContext &&
+            meshContent &&
+            (!writtenBlob || writtenBlob !== meshContent);
 
-        console.log(
-          `[OpenSCAD] File "${filename}": inContext=${inContext}, needsWrite=${needsWrite}`,
-        );
-
-        if (needsWrite && meshContent) {
           console.log(
-            `[OpenSCAD] Writing "${filename}" to worker (${meshContent.size} bytes)`,
+            `[OpenSCAD] File "${filename}": inContext=${inContext}, needsWrite=${needsWrite}`,
           );
-          await writeFile(filename, meshContent);
-          writtenFilesRef.current.set(filename, meshContent);
-        }
-      }
 
-      // Now compile the code
-      console.log('[OpenSCAD] Compiling...');
-      compileScad(scadCode);
+          if (needsWrite && meshContent) {
+            console.log(
+              `[OpenSCAD] Writing "${filename}" to worker (${meshContent.size} bytes)`,
+            );
+            await writeFile(filename, meshContent);
+            writtenFilesRef.current.set(filename, meshContent);
+          }
+        }
+
+        // Now compile the code
+        console.log('[OpenSCAD] Compiling...');
+        compileScad(scadCode);
+      } catch (err) {
+        console.error('[OpenSCAD] Error preparing files for compilation:', err);
+      }
     };
 
     compileWithMeshFiles();

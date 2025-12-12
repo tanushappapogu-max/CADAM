@@ -41,8 +41,9 @@ export function OpenSCADViewer() {
   const { getMeshFile, hasMeshFile } = useMeshFiles();
   const [geometry, setGeometry] = useState<BufferGeometry | null>(null);
   const { mutate: sendMessage } = useSendContentMutation({ conversation });
-  // Track which files we've written to avoid re-writing
-  const writtenFilesRef = useRef<Set<string>>(new Set());
+  // Track which files (and their versions) we've written to avoid re-writing
+  // Maps filename -> Blob instance
+  const writtenFilesRef = useRef<Map<string, Blob>>(new Map());
 
   const scadCode = currentMessage?.content.artifact?.code;
 
@@ -57,20 +58,27 @@ export function OpenSCADViewer() {
       // Write any mesh files that haven't been written yet
       for (const filename of importedFiles) {
         const inContext = hasMeshFile(filename);
-        const alreadyWritten = writtenFilesRef.current.has(filename);
+        const meshContent = getMeshFile(filename);
+
+        // Check if we need to write:
+        // 1. File exists in context
+        // 2. We haven't written it OR the content has changed (new Blob reference)
+        const writtenBlob = writtenFilesRef.current.get(filename);
+        const needsWrite =
+          inContext &&
+          meshContent &&
+          (!writtenBlob || writtenBlob !== meshContent);
+
         console.log(
-          `[OpenSCAD] File "${filename}": inContext=${inContext}, written=${alreadyWritten}`,
+          `[OpenSCAD] File "${filename}": inContext=${inContext}, needsWrite=${needsWrite}`,
         );
 
-        if (!alreadyWritten && inContext) {
-          const meshContent = getMeshFile(filename);
-          if (meshContent) {
-            console.log(
-              `[OpenSCAD] Writing "${filename}" to worker (${meshContent.size} bytes)`,
-            );
-            await writeFile(filename, meshContent);
-            writtenFilesRef.current.add(filename);
-          }
+        if (needsWrite && meshContent) {
+          console.log(
+            `[OpenSCAD] Writing "${filename}" to worker (${meshContent.size} bytes)`,
+          );
+          await writeFile(filename, meshContent);
+          writtenFilesRef.current.set(filename, meshContent);
         }
       }
 

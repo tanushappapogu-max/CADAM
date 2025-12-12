@@ -1,7 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { WorkerMessage, WorkerMessageType } from '@/worker/types';
 import OpenSCADError from '@/lib/OpenSCADError';
-import WorkspaceFile from '@/lib/WorkspaceFile';
 
 // Type for pending request resolvers
 type PendingRequest = {
@@ -88,12 +87,8 @@ export function useOpenSCAD() {
     async (path: string, content: Blob | File): Promise<void> => {
       const worker = getWorker();
 
-      // Convert Blob to WorkspaceFile if needed
+      // Get the ArrayBuffer (this creates a copy)
       const arrayBuffer = await content.arrayBuffer();
-      const workspaceFile = new WorkspaceFile([arrayBuffer], path, {
-        path,
-        type: content.type,
-      });
 
       // Generate unique ID for this request
       const requestId = `fs-write-${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -111,11 +106,13 @@ export function useOpenSCAD() {
         type: WorkerMessageType.FS_WRITE,
         data: {
           path,
-          content: workspaceFile,
+          content: arrayBuffer,
+          type: content.type,
         },
       };
 
-      worker.postMessage(message);
+      // Transfer the ArrayBuffer to the worker (zero-copy transfer)
+      worker.postMessage(message, [arrayBuffer]);
 
       // Wait for worker to confirm the write
       await responsePromise;

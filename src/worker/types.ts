@@ -56,5 +56,6 @@ export type OpenSCADWorkerResponseData = {
 
 export type FileSystemWorkerMessageData = {
   path: string;
-  content?: WorkspaceFile; // Content is only necessary when writing
+  content?: WorkspaceFile | ArrayBuffer; // Content is only necessary when writing
+  type?: string; // MIME type, needed if content is ArrayBuffer
 };

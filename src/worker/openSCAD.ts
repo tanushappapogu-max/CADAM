@@ -231,9 +231,22 @@ class OpenSCADWrapper {
           path: data.path,
           type: data.type || 'application/octet-stream',
         });
+      } else if (data.content instanceof File) {
+        // It's a File/WorkspaceFile - wrap it to ensure path is set
+        workspaceFile = new WorkspaceFile(
+          [data.content],
+          data.content.name || data.path,
+          {
+            path: data.path,
+            type: data.content.type || 'application/octet-stream',
+          },
+        );
       } else {
-        // Assume it's already a WorkspaceFile/File (legacy path)
-        workspaceFile = data.content as WorkspaceFile;
+        // Unknown type, skip
+        console.warn(
+          `[Worker] Unknown content type for "${data.path}", skipping`,
+        );
+        return false;
       }
 
       // Ensure the path is set before adding

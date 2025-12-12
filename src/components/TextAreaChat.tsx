@@ -306,7 +306,7 @@ function TextAreaChat({
         });
       } else {
         // Process first STL file
-        handleSTLUpload(stlFiles[0]);
+        await handleSTLUpload(stlFiles[0]);
         if (stlFiles.length > 1) {
           toast({
             title: 'Multiple 3D models',

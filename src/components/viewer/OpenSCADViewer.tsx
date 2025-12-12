@@ -47,7 +47,6 @@ export function OpenSCADViewer() {
       try {
         // Extract any import() filenames from the code
         const importedFiles = extractImportFilenames(scadCode);
-        console.log('[OpenSCAD] Code has imports:', importedFiles);
 
         // Write any mesh files that haven't been written yet
         for (const filename of importedFiles) {
@@ -63,21 +62,13 @@ export function OpenSCADViewer() {
             meshContent &&
             (!writtenBlob || writtenBlob !== meshContent);
 
-          console.log(
-            `[OpenSCAD] File "${filename}": inContext=${inContext}, needsWrite=${needsWrite}`,
-          );
-
           if (needsWrite && meshContent) {
-            console.log(
-              `[OpenSCAD] Writing "${filename}" to worker (${meshContent.size} bytes)`,
-            );
             await writeFile(filename, meshContent);
             writtenFilesRef.current.set(filename, meshContent);
           }
         }
 
         // Now compile the code
-        console.log('[OpenSCAD] Compiling...');
         compileScad(scadCode);
       } catch (err) {
         console.error('[OpenSCAD] Error preparing files for compilation:', err);
@@ -101,15 +92,6 @@ export function OpenSCADViewer() {
       setGeometry(null);
     }
   }, [output, setBlob]);
-
-  useEffect(() => {
-    if (isError && error) {
-      console.log('OpenSCAD Error:', error);
-      if (error instanceof OpenSCADError) {
-        console.log('Error details:', error.stdErr);
-      }
-    }
-  }, [isError, error]);
 
   const fixError = useCallback(
     async (error: OpenSCADError) => {

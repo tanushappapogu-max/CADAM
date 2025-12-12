@@ -29,15 +29,8 @@ export function OpenSCADViewer() {
   const { conversation } = useConversation();
   const { currentMessage } = useCurrentMessage();
   const { setBlob } = useBlob();
-  const {
-    compileScad,
-    writeFile,
-    hasFile,
-    isCompiling,
-    output,
-    isError,
-    error,
-  } = useOpenSCAD();
+  const { compileScad, writeFile, isCompiling, output, isError, error } =
+    useOpenSCAD();
   const { getMeshFile, hasMeshFile } = useMeshFiles();
   const [geometry, setGeometry] = useState<BufferGeometry | null>(null);
   const { mutate: sendMessage } = useSendContentMutation({ conversation });
@@ -92,7 +85,7 @@ export function OpenSCADViewer() {
     };
 
     compileWithMeshFiles();
-  }, [scadCode, compileScad, writeFile, hasFile, getMeshFile, hasMeshFile]);
+  }, [scadCode, compileScad, writeFile, getMeshFile, hasMeshFile]);
 
   useEffect(() => {
     setBlob(output ?? null);

@@ -103,7 +103,7 @@ export function UserMessage({ message, isLoading }: UserMessageProps) {
       <div
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
-        className="relative flex min-w-0 max-w-full flex-col gap-1"
+        className="relative flex min-w-0 max-w-[80%] flex-col gap-1"
       >
         {message.content.error ? (
           <div className="rounded-lg bg-adam-bg-secondary-dark">

@@ -31,12 +31,9 @@ function escapeRegExp(string: string): string {
 }
 
 // Helper to detect and extract OpenSCAD code from text response
-// This handles cases where the LLM outputs code directly instead of using tools
 function extractOpenSCADCodeFromText(text: string): string | null {
   if (!text) return null;
 
-  // First try to extract from markdown code blocks
-  // Match ```openscad ... ``` or ``` ... ``` containing OpenSCAD-like code
   const codeBlockRegex = /```(?:openscad)?\s*\n?([\s\S]*?)\n?```/g;
   let match;
   let bestCode: string | null = null;
@@ -51,16 +48,12 @@ function extractOpenSCADCodeFromText(text: string): string | null {
     }
   }
 
-  // If we found code in a code block with a good score, return it
   if (bestCode && bestScore >= 3) {
     return bestCode;
   }
 
-  // If no code blocks, check if the entire text looks like OpenSCAD code
-  // This handles cases where the model outputs raw code without markdown
   const rawScore = scoreOpenSCADCode(text);
   if (rawScore >= 5) {
-    // Higher threshold for raw text
     return text.trim();
   }
 
@@ -72,19 +65,17 @@ function scoreOpenSCADCode(code: string): number {
   if (!code || code.length < 20) return 0;
 
   let score = 0;
-
-  // OpenSCAD-specific keywords and patterns
   const patterns = [
-    /\b(cube|sphere|cylinder|polyhedron)\s*\(/gi, // Primitives
-    /\b(union|difference|intersection)\s*\(\s*\)/gi, // Boolean ops
-    /\b(translate|rotate|scale|mirror)\s*\(/gi, // Transformations
-    /\b(linear_extrude|rotate_extrude)\s*\(/gi, // Extrusions
-    /\b(module|function)\s+\w+\s*\(/gi, // Modules and functions
-    /\$fn\s*=/gi, // Special variables
-    /\bfor\s*\(\s*\w+\s*=\s*\[/gi, // For loops OpenSCAD style
-    /\bimport\s*\(\s*"/gi, // Import statements
-    /;\s*$/gm, // Semicolon line endings (common in OpenSCAD)
-    /\/\/.*$/gm, // Single-line comments
+    /\b(cube|sphere|cylinder|polyhedron)\s*\(/gi,
+    /\b(union|difference|intersection)\s*\(\s*\)/gi,
+    /\b(translate|rotate|scale|mirror)\s*\(/gi,
+    /\b(linear_extrude|rotate_extrude)\s*\(/gi,
+    /\b(module|function)\s+\w+\s*\(/gi,
+    /\$fn\s*=/gi,
+    /\bfor\s*\(\s*\w+\s*=\s*\[/gi,
+    /\bimport\s*\(\s*"/gi,
+    /;\s*$/gm,
+    /\/\/.*$/gm,
   ];
 
   for (const pattern of patterns) {
@@ -94,16 +85,15 @@ function scoreOpenSCADCode(code: string): number {
     }
   }
 
-  // Variable declarations with = and ; are common
   const varDeclarations = code.match(/^\s*\w+\s*=\s*[^;]+;/gm);
   if (varDeclarations) {
-    score += Math.min(varDeclarations.length, 5); // Cap contribution
+    score += Math.min(varDeclarations.length, 5);
   }
 
   return score;
 }
 
-// Helper to mark a tool as error and avoid duplication
+// Helper to mark a tool as error
 function markToolAsError(content: Content, toolId: string): Content {
   return {
     ...content,
@@ -113,7 +103,7 @@ function markToolAsError(content: Content, toolId: string): Content {
   };
 }
 
-// Anthropic block types for type safety
+// Anthropic block types
 interface AnthropicTextBlock {
   type: 'text';
   text: string;
@@ -122,15 +112,8 @@ interface AnthropicTextBlock {
 interface AnthropicImageBlock {
   type: 'image';
   source:
-    | {
-        type: 'base64';
-        media_type: string;
-        data: string;
-      }
-    | {
-        type: 'url';
-        url: string;
-      };
+    | { type: 'base64'; media_type: string; data: string }
+    | { type: 'url'; url: string };
 }
 
 type AnthropicBlock = AnthropicTextBlock | AnthropicImageBlock;
@@ -144,11 +127,12 @@ function isAnthropicBlock(block: unknown): block is AnthropicBlock {
   );
 }
 
-// Convert Anthropic-style message to OpenAI format
+// OpenAI message format
 interface OpenAIMessage {
   role: 'system' | 'user' | 'assistant' | 'tool';
   content:
     | string
+    | null
     | Array<{ type: string; text?: string; image_url?: { url: string } }>;
   tool_call_id?: string;
   tool_calls?: Array<{
@@ -161,13 +145,10 @@ interface OpenAIMessage {
 interface OpenRouterRequest {
   model: string;
   messages: OpenAIMessage[];
-  tools?: unknown[]; // OpenRouter/OpenAI tool definition
+  tools?: unknown[];
   stream?: boolean;
   max_tokens?: number;
-  reasoning?: {
-    max_tokens?: number;
-    effort?: 'high' | 'medium' | 'low';
-  };
+  reasoning?: { max_tokens?: number; effort?: 'high' | 'medium' | 'low' };
 }
 
 async function generateTitleFromMessages(
@@ -195,10 +176,7 @@ async function generateTitleFromMessages(
         messages: [
           { role: 'system', content: titleSystemPrompt },
           ...messagesToSend,
-          {
-            role: 'user',
-            content: 'Title:',
-          },
+          { role: 'user', content: 'Title:' },
         ],
       }),
     });
@@ -210,35 +188,22 @@ async function generateTitleFromMessages(
     const data = await response.json();
     if (data.choices && data.choices[0]?.message?.content) {
       let title = data.choices[0].message.content.trim();
-
-      // Clean up common LLM artifacts
-      // Remove quotes
       title = title.replace(/^["']|["']$/g, '');
-      // Remove "Title:" prefix if model echoed it
       title = title.replace(/^title:\s*/i, '');
-      // Remove any trailing punctuation except necessary ones
       title = title.replace(/[.!?:;,]+$/, '');
-      // Remove meta-commentary patterns
       title = title.replace(
         /\s*(note[s]?|here'?s?|based on|for the|this is).*$/i,
         '',
       );
-      // Trim again after cleanup
       title = title.trim();
-
-      // Enforce max length
       if (title.length > 27) title = title.substring(0, 24) + '...';
-
-      // If title is empty or too short after cleanup, return null to use fallback
       if (title.length < 2) return 'Adam Object';
-
       return title;
     }
   } catch (error) {
     console.error('Error generating object title:', error);
   }
 
-  // Fallbacks
   let lastUserMessage: OpenAIMessage | undefined;
   for (let i = messagesToSend.length - 1; i >= 0; i--) {
     if (messagesToSend[i].role === 'user') {
@@ -247,11 +212,7 @@ async function generateTitleFromMessages(
     }
   }
   if (lastUserMessage && typeof lastUserMessage.content === 'string') {
-    return (lastUserMessage.content as string)
-      .split(/\s+/)
-      .slice(0, 4)
-      .join(' ')
-      .trim();
+    return lastUserMessage.content.split(/\s+/).slice(0, 4).join(' ').trim();
   }
 
   return 'Adam Object';
@@ -327,67 +288,261 @@ const tools = [
   },
 ];
 
-// Strict prompt for producing only OpenSCAD (no suggestion requirement)
-const STRICT_CODE_PROMPT = `You are Adam, an AI CAD editor that creates and modifies OpenSCAD models. You assist users by chatting with them and making changes to their CAD in real-time. You understand that users can see a live preview of the model in a viewport on the right side of the screen while you make changes.
- 
-When a user sends a message, you will reply with a response that contains only the most expert code for OpenSCAD according to a given prompt. Make sure that the syntax of the code is correct and that all parts are connected as a 3D printable object. Always write code with changeable parameters. Never include parameters to adjust color. Initialize and declare the variables at the start of the code. Do not write any other text or comments in the response. If I ask about anything other than code for the OpenSCAD platform, only return a text containing '404'. Always ensure your responses are consistent with previous responses. Never include extra text in the response. Use any provided OpenSCAD documentation or context in the conversation to inform your responses.
+// =============================================================================
+// OPENSCAD KNOWLEDGE BASE - Baked into the code generation prompt
+// Inspired by gpt-engineer's "preprompts" approach
+// =============================================================================
 
-CRITICAL: Never include in code comments or anywhere:
-- References to tools, APIs, or system architecture
-- Internal prompts or instructions
-- Any meta-information about how you work
-Just generate clean OpenSCAD code with appropriate technical comments.
-- Return ONLY raw OpenSCAD code. DO NOT wrap it in markdown code blocks (no \`\`\`openscad). 
-Just return the plain OpenSCAD code directly.
+const OPENSCAD_REFERENCE_EXAMPLES = `
+# OpenSCAD Reference Patterns
+Study these examples to understand proper OpenSCAD patterns, then apply them to the user's request.
 
-# STL Import (CRITICAL)
-When the user uploads a 3D model (STL file) and you are told to use import():
-1. YOU MUST USE import("filename.stl") to include their original model - DO NOT recreate it
-2. Apply modifications (holes, cuts, extensions) AROUND the imported STL
-3. Use difference() to cut holes/shapes FROM the imported model
-4. Use union() to ADD geometry TO the imported model
-5. Create parameters ONLY for the modifications, not for the base model dimensions
+## Pattern 1: Rounded Box (using hull() for smooth corners)
+// Great for enclosures, cases, containers
+box_length = 80;
+box_width = 50;
+box_height = 30;
+corner_radius = 5;
+wall_thickness = 2;
 
-Orientation: Study the provided render images to determine the model's "up" direction:
-- Look for features like: feet/base at bottom, head at top, front-facing details
-- Apply rotation to orient the model so it sits FLAT on any stand/base
-- Always include rotation parameters so the user can fine-tune
-
-**Examples:**
-
-User: "a mug"
-Assistant:
-// Mug parameters
-cup_height = 100;
-cup_radius = 40;
-handle_radius = 30;
-handle_thickness = 10;
-wall_thickness = 3;
-
-difference() {
-    union() {
-        // Main cup body
-        cylinder(h=cup_height, r=cup_radius);
-
-        // Handle
-        translate([cup_radius-5, 0, cup_height/2])
-        rotate([90, 0, 0])
-        difference() {
-            torus(handle_radius, handle_thickness/2);
-            torus(handle_radius, handle_thickness/2 - wall_thickness);
-        }
+module rounded_box(length, width, height, radius) {
+    hull() {
+        for (x = [radius, length - radius])
+            for (y = [radius, width - radius])
+                translate([x, y, 0])
+                cylinder(r=radius, h=height, $fn=32);
     }
-
-    // Hollow out the cup
-    translate([0, 0, wall_thickness])
-    cylinder(h=cup_height, r=cup_radius-wall_thickness);
 }
 
-module torus(r1, r2) {
-    rotate_extrude()
-    translate([r1, 0, 0])
-    circle(r=r2);
-}`;
+difference() {
+    rounded_box(box_length, box_width, box_height, corner_radius);
+    translate([wall_thickness, wall_thickness, wall_thickness])
+    rounded_box(
+        box_length - 2*wall_thickness,
+        box_width - 2*wall_thickness,
+        box_height,
+        corner_radius - wall_thickness/2
+    );
+}
+
+## Pattern 2: Box with Lid (proper fit clearances for 3D printing)
+// CRITICAL: Use 0.3mm clearance for FDM printing fit
+box_length = 60;
+box_width = 40;
+box_height = 25;
+wall_thickness = 2;
+lip_height = 4;
+lip_clearance = 0.3;  // Tolerance for 3D printing fit
+
+module box_base() {
+    difference() {
+        cube([box_length, box_width, box_height]);
+        translate([wall_thickness, wall_thickness, wall_thickness])
+        cube([box_length - 2*wall_thickness, box_width - 2*wall_thickness, box_height]);
+    }
+    // Inner lip for lid
+    difference() {
+        translate([wall_thickness, wall_thickness, box_height - lip_height])
+        cube([box_length - 2*wall_thickness, box_width - 2*wall_thickness, lip_height]);
+        translate([wall_thickness*2, wall_thickness*2, box_height - lip_height])
+        cube([box_length - 4*wall_thickness, box_width - 4*wall_thickness, lip_height + 1]);
+    }
+}
+
+module box_lid() {
+    lid_inner_width = box_length - 2*wall_thickness - lip_clearance*2;
+    lid_inner_depth = box_width - 2*wall_thickness - lip_clearance*2;
+    cube([box_length, box_width, wall_thickness]);
+    translate([wall_thickness + lip_clearance, wall_thickness + lip_clearance, wall_thickness])
+    difference() {
+        cube([lid_inner_width, lid_inner_depth, lip_height - lip_clearance]);
+        translate([wall_thickness, wall_thickness, -1])
+        cube([lid_inner_width - 2*wall_thickness, lid_inner_depth - 2*wall_thickness, lip_height + 2]);
+    }
+}
+
+## Pattern 3: Snap-Fit Joint (cantilever beam with hook)
+// Common for enclosures and removable panels
+snap_width = 8;
+snap_length = 15;
+snap_thickness = 2;
+snap_hook_height = 2;
+snap_hook_angle = 45;
+clearance = 0.3;
+
+module snap_male() {
+    cube([snap_width, snap_length, snap_thickness]);
+    translate([0, snap_length, 0])
+    hull() {
+        cube([snap_width, 0.1, snap_thickness]);
+        translate([0, snap_hook_height * tan(snap_hook_angle), 0])
+        cube([snap_width, 0.1, snap_thickness + snap_hook_height]);
+    }
+}
+
+## Pattern 4: Gear (involute tooth profile)
+num_teeth = 20;
+module_size = 2;  // Metric module
+gear_thickness = 8;
+shaft_diameter = 6;
+
+pitch_diameter = num_teeth * module_size;
+outer_diameter = pitch_diameter + 2 * module_size;
+root_diameter = pitch_diameter - 2.5 * module_size;
+
+module gear_tooth() {
+    tooth_width = module_size * 3.14159 / 2;
+    hull() {
+        translate([0, root_diameter/2 - 0.1, 0])
+        square([tooth_width * 1.2, 0.2], center=true);
+        translate([0, pitch_diameter/2, 0])
+        square([tooth_width, 0.2], center=true);
+        translate([0, outer_diameter/2 - 0.5, 0])
+        square([tooth_width * 0.7, 0.2], center=true);
+    }
+}
+
+module gear_2d() {
+    circle(d=root_diameter);
+    for (i = [0:num_teeth-1])
+        rotate([0, 0, i * 360/num_teeth])
+        gear_tooth();
+}
+
+linear_extrude(height=gear_thickness) gear_2d();
+
+## Pattern 5: Print-in-Place Hinge
+hinge_width = 40;
+hinge_thickness = 3;
+barrel_diameter = 8;
+num_knuckles = 5;
+clearance = 0.4;  // Gap for print-in-place
+pin_diameter = 3;
+
+knuckle_width = hinge_width / num_knuckles;
+
+module hinge_leaf(side=0) {
+    difference() {
+        union() {
+            cube([30, hinge_width, hinge_thickness]);
+            for (i = [side : 2 : num_knuckles-1]) {
+                translate([30, i * knuckle_width + clearance/2, barrel_diameter/2])
+                rotate([-90, 0, 0])
+                cylinder(d=barrel_diameter, h=knuckle_width - clearance);
+            }
+        }
+        translate([30, -1, barrel_diameter/2])
+        rotate([-90, 0, 0])
+        cylinder(d=pin_diameter + clearance, h=hinge_width + 2);
+    }
+}
+
+## Pattern 6: Mounting Bracket with Fillets
+bracket_width = 40;
+bracket_height = 50;
+bracket_depth = 30;
+thickness = 4;
+hole_diameter = 5;
+fillet_radius = 8;
+
+module l_bracket() {
+    difference() {
+        union() {
+            cube([bracket_width, thickness, bracket_height]);
+            cube([bracket_width, bracket_depth, thickness]);
+            // Fillet/gusset for strength
+            translate([0, thickness, thickness])
+            rotate([90, 0, 90])
+            linear_extrude(height=bracket_width)
+            difference() {
+                square([fillet_radius, fillet_radius]);
+                translate([fillet_radius, fillet_radius])
+                circle(r=fillet_radius);
+            }
+        }
+        // Mounting holes
+        for (x = [10, bracket_width - 10])
+            translate([x, -1, bracket_height - 10])
+            rotate([-90, 0, 0])
+            cylinder(d=hole_diameter, h=thickness + 2);
+    }
+}
+`;
+
+const OPENSCAD_QUICK_REFERENCE = `
+# OpenSCAD Quick Reference
+
+## 3D Primitives
+- cube(size) or cube([x,y,z], center=true)
+- sphere(r=radius) or sphere(d=diameter)
+- cylinder(h=height, r=radius) or cylinder(h, r1, r2) for cone
+- cylinder(h, d=diameter, $fn=6) for hexagon
+
+## Transformations
+- translate([x,y,z]) - move
+- rotate([x,y,z]) - rotate in degrees, applied X→Y→Z
+- scale([x,y,z]) - resize
+- mirror([1,0,0]) - mirror across YZ plane
+
+## Boolean Operations
+- difference() { base; cutters... } - subtract all from first
+- union() { parts... } - combine
+- intersection() { parts... } - keep only overlap
+- hull() { parts... } - convex hull (great for rounded shapes!)
+
+## 2D → 3D
+- linear_extrude(height, twist, scale) - extrude along Z
+- rotate_extrude(angle) - revolve around Z (shape must be in +X)
+
+## 2D Primitives
+- circle(r) or circle(d)
+- square(size) or square([x,y], center=true)
+- polygon(points=[[x,y],...])
+- text("string", size, halign, valign)
+
+## Loops & Modules
+- for (i = [0:n-1]) { ... } - creates union of all iterations
+- module name(params) { ... } - define reusable shape
+- children() - access shapes passed to module
+
+## Resolution
+- $fn=32 for preview, $fn=64 for final
+- Higher $fn = smoother curves but slower
+
+## 3D Printing Tips
+- Wall thickness: minimum 1.2mm (2 perimeters)
+- Clearance for fit: 0.3mm for FDM
+- Overhang limit: 45° without supports
+- Bridge limit: ~50mm
+`;
+
+// Code generation system prompt with baked-in knowledge
+const STRICT_CODE_PROMPT = `You are Adam, an expert OpenSCAD engineer. You create precise, parametric, 3D-printable models.
+
+${OPENSCAD_REFERENCE_EXAMPLES}
+
+${OPENSCAD_QUICK_REFERENCE}
+
+# Your Task
+Generate OpenSCAD code based on the user's request. Apply the patterns above where relevant.
+
+# Rules
+1. ALWAYS declare parameters at the top with descriptive names
+2. NEVER include color parameters (STL export ignores color)
+3. Use modules for reusable components
+4. Add brief comments explaining geometry
+5. Ensure manifold geometry (no zero-thickness walls, proper boolean operations)
+6. Use appropriate $fn (32 for preview is fine)
+7. Return ONLY raw OpenSCAD code - NO markdown code blocks, NO explanations
+8. Make it 3D printable: adequate wall thickness, no impossible overhangs
+
+# STL Import (when user uploads a model)
+When told to use import():
+1. Use import("filename.stl") - DO NOT recreate the model
+2. Apply modifications AROUND the import using difference/union
+3. Create parameters ONLY for modifications, not base model
+
+Now generate OpenSCAD code for the user's request:`;
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -427,7 +582,7 @@ Deno.serve(async (req) => {
     conversationId,
     model,
     newMessageId,
-    thinking, // Add thinking parameter
+    thinking,
   }: {
     messageId: string;
     conversationId: string;
@@ -509,8 +664,6 @@ Deno.serve(async (req) => {
             userData.user.id,
             conversationId,
           );
-          // Convert Anthropic-style to OpenAI-style
-          // formatUserMessage returns content as an array
           return {
             role: 'user' as const,
             content: formatted.content.map((block: unknown) => {
@@ -518,35 +671,38 @@ Deno.serve(async (req) => {
                 if (block.type === 'text') {
                   return { type: 'text', text: block.text };
                 } else if (block.type === 'image') {
-                  // Handle both URL and base64 image formats
                   let imageUrl: string;
                   if (
                     'type' in block.source &&
                     block.source.type === 'base64'
                   ) {
-                    // Convert Anthropic base64 format to OpenAI data URL format
                     imageUrl = `data:${block.source.media_type};base64,${block.source.data}`;
                   } else if ('url' in block.source) {
-                    // Use URL directly
                     imageUrl = block.source.url;
                   } else {
-                    // Fallback or error case
-                    return block;
+                    return block as {
+                      type: string;
+                      text?: string;
+                      image_url?: { url: string };
+                    };
                   }
                   return {
                     type: 'image_url',
                     image_url: {
                       url: imageUrl,
-                      detail: 'auto', // Auto-detect appropriate detail level
+                      detail: 'auto',
                     },
                   };
                 }
               }
-              return block;
+              return block as {
+                type: string;
+                text?: string;
+                image_url?: { url: string };
+              };
             }),
           };
         }
-        // Assistant messages: send code or text from history as plain text
         return {
           role: 'assistant' as const,
           content: msg.content.artifact
@@ -568,17 +724,13 @@ Deno.serve(async (req) => {
       max_tokens: 16000,
     };
 
-    // Add reasoning/thinking parameter if requested and supported
-    // OpenRouter uses a unified 'reasoning' parameter
     if (thinking) {
       requestBody.reasoning = {
         max_tokens: 12000,
       };
-      // Ensure total max_tokens is high enough to accommodate reasoning + output
       requestBody.max_tokens = 20000;
     }
 
-    // Log messages for debugging (especially image content)
     console.log(
       'Sending messages to OpenRouter:',
       JSON.stringify(messagesToSend, null, 2),
@@ -611,7 +763,6 @@ Deno.serve(async (req) => {
           arguments: string;
         } | null = null;
 
-        // Utility to mark all pending tools as error when finalizing on failure/cancel
         const markAllToolsError = () => {
           if (content.toolCalls) {
             content = {
@@ -658,22 +809,15 @@ Deno.serve(async (req) => {
                       ...content,
                       text: (content.text || '') + delta.content,
                     };
-                    streamMessage(controller, { ...newMessageData, content });
-                  }
-
-                  // Handle reasoning content (if returned by OpenRouter)
-                  if (delta.reasoning) {
-                    // We can optionally display this, but for now we just consume it so it doesn't break anything
-                    // Or append to text if we want to show it?
-                    // Usually we don't show internal reasoning in the final message unless explicitly requested.
+                    streamMessage(controller, {
+                      ...newMessageData,
+                      content,
+                    } as Message);
                   }
 
                   // Handle tool calls
                   if (delta.tool_calls) {
                     for (const toolCall of delta.tool_calls) {
-                      const _index = toolCall.index || 0;
-
-                      // Start of new tool call
                       if (toolCall.id) {
                         currentToolCall = {
                           id: toolCall.id,
@@ -694,10 +838,9 @@ Deno.serve(async (req) => {
                         streamMessage(controller, {
                           ...newMessageData,
                           content,
-                        });
+                        } as Message);
                       }
 
-                      // Accumulate arguments
                       if (toolCall.function?.arguments && currentToolCall) {
                         currentToolCall.arguments +=
                           toolCall.function.arguments;
@@ -705,7 +848,7 @@ Deno.serve(async (req) => {
                     }
                   }
 
-                  // Check if tool call is complete (when we get finish_reason)
+                  // Check if tool call is complete
                   if (
                     chunk.choices?.[0]?.finish_reason === 'tool_calls' &&
                     currentToolCall
@@ -734,26 +877,17 @@ Deno.serve(async (req) => {
           }
           markAllToolsError();
         } finally {
-          // Fallback: If no artifact was created but text contains OpenSCAD code,
-          // extract it and create an artifact. This handles cases where the LLM
-          // outputs code directly instead of using tools (common in long conversations).
+          // Fallback: extract code from text if no artifact
           if (!content.artifact && content.text) {
             const extractedCode = extractOpenSCADCodeFromText(content.text);
             if (extractedCode) {
               console.log(
                 'Fallback: Extracted OpenSCAD code from text response',
               );
-
-              // Generate a title from the messages
               const title = await generateTitleFromMessages(messagesToSend);
-
-              // Remove the code from the text (keep any non-code explanation)
-              let cleanedText = content.text;
-              // Remove markdown code blocks
-              cleanedText = cleanedText
+              let cleanedText = content.text
                 .replace(/```(?:openscad)?\s*\n?[\s\S]*?\n?```/g, '')
                 .trim();
-              // If what remains is very short or empty, clear it
               if (cleanedText.length < 10) {
                 cleanedText = '';
               }
@@ -800,17 +934,18 @@ Deno.serve(async (req) => {
             } catch (e) {
               console.error('Invalid tool input JSON', e);
               content = markToolAsError(content, toolCall.id);
-              streamMessage(controller, { ...newMessageData, content });
+              streamMessage(controller, {
+                ...newMessageData,
+                content,
+              } as Message);
               return;
             }
 
-            // Prepare a focused request to produce code only
             const userRequest =
               toolInput.text ||
-              newMessage.content.text ||
+              newMessage?.content.text ||
               'Create a printable model';
 
-            // For simple requests, use minimal context to avoid confusion
             const isSimpleRequest =
               !toolInput.baseCode &&
               !toolInput.error &&
@@ -849,7 +984,7 @@ Deno.serve(async (req) => {
                   },
                 ];
 
-            // Code generation request logic
+            // Code generation with baked-in OpenSCAD knowledge
             const codeRequestBody: OpenRouterRequest = {
               model,
               messages: [
@@ -859,7 +994,6 @@ Deno.serve(async (req) => {
               max_tokens: 16000,
             };
 
-            // Also apply thinking to code generation if enabled
             if (thinking) {
               codeRequestBody.reasoning = {
                 max_tokens: 12000,
@@ -928,7 +1062,10 @@ Deno.serve(async (req) => {
                 artifact,
               };
             }
-            streamMessage(controller, { ...newMessageData, content });
+            streamMessage(controller, {
+              ...newMessageData,
+              content,
+            } as Message);
           } else if (toolCall.name === 'apply_parameter_changes') {
             let toolInput: {
               updates?: Array<{ name: string; value: string }>;
@@ -938,13 +1075,15 @@ Deno.serve(async (req) => {
             } catch (e) {
               console.error('Invalid tool input JSON', e);
               content = markToolAsError(content, toolCall.id);
-              streamMessage(controller, { ...newMessageData, content });
+              streamMessage(controller, {
+                ...newMessageData,
+                content,
+              } as Message);
               return;
             }
 
-            // Determine base code to update
             let baseCode = content.artifact?.code;
-            if (!baseCode) {
+            if (!baseCode && messages) {
               const lastArtifactMsg = [...messages]
                 .reverse()
                 .find(
@@ -959,17 +1098,18 @@ Deno.serve(async (req) => {
               toolInput.updates.length === 0
             ) {
               content = markToolAsError(content, toolCall.id);
-              streamMessage(controller, { ...newMessageData, content });
+              streamMessage(controller, {
+                ...newMessageData,
+                content,
+              } as Message);
               return;
             }
 
-            // Patch parameters deterministically
             let patchedCode = baseCode;
             const currentParams = parseParameters(baseCode);
             for (const upd of toolInput.updates) {
               const target = currentParams.find((p) => p.name === upd.name);
               if (!target) continue;
-              // Coerce value based on existing type
               let coerced: string | number | boolean = upd.value;
               try {
                 if (target.type === 'number') coerced = Number(upd.value);
@@ -1006,7 +1146,10 @@ Deno.serve(async (req) => {
               ),
               artifact,
             };
-            streamMessage(controller, { ...newMessageData, content });
+            streamMessage(controller, {
+              ...newMessageData,
+              content,
+            } as Message);
           }
         }
       },

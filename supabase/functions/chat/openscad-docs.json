@@ -1,0 +1,606 @@
+[
+  {
+    "id": "cube",
+    "category": "3D Primitives",
+    "signature": "cube(size, center)",
+    "parameters": [
+      {
+        "name": "size",
+        "type": "number or [x,y,z]",
+        "description": "Single value for cube, or [x,y,z] for rectangular box"
+      },
+      {
+        "name": "center",
+        "type": "boolean",
+        "description": "If true, centers the cube on origin. Default: false (corner at origin)"
+      }
+    ],
+    "description": "Creates a cube or rectangular box. When size is a single number, creates a cube. When size is [x,y,z], creates a box with those dimensions.",
+    "examples": [
+      "cube(10);",
+      "cube([20, 30, 10]);",
+      "cube([10, 10, 5], center=true);"
+    ]
+  },
+  {
+    "id": "sphere",
+    "category": "3D Primitives",
+    "signature": "sphere(r, d)",
+    "parameters": [
+      { "name": "r", "type": "number", "description": "Radius of sphere" },
+      {
+        "name": "d",
+        "type": "number",
+        "description": "Diameter of sphere (alternative to r)"
+      }
+    ],
+    "description": "Creates a sphere centered at the origin. Use $fn, $fa, or $fs to control resolution.",
+    "examples": ["sphere(r=10);", "sphere(d=20, $fn=64);"]
+  },
+  {
+    "id": "cylinder",
+    "category": "3D Primitives",
+    "signature": "cylinder(h, r, r1, r2, d, d1, d2, center)",
+    "parameters": [
+      { "name": "h", "type": "number", "description": "Height of cylinder" },
+      {
+        "name": "r",
+        "type": "number",
+        "description": "Radius (for uniform cylinder)"
+      },
+      {
+        "name": "r1",
+        "type": "number",
+        "description": "Bottom radius (for cone)"
+      },
+      {
+        "name": "r2",
+        "type": "number",
+        "description": "Top radius (for cone)"
+      },
+      {
+        "name": "d",
+        "type": "number",
+        "description": "Diameter (alternative to r)"
+      },
+      {
+        "name": "center",
+        "type": "boolean",
+        "description": "If true, centers on Z axis. Default: false (base at z=0)"
+      }
+    ],
+    "description": "Creates a cylinder or cone. Use r1/r2 for cones. Use $fn to control number of sides (e.g., $fn=6 for hexagon).",
+    "examples": [
+      "cylinder(h=20, r=10);",
+      "cylinder(h=15, r1=10, r2=5);",
+      "cylinder(h=10, d=20, center=true, $fn=6);"
+    ]
+  },
+  {
+    "id": "polyhedron",
+    "category": "3D Primitives",
+    "signature": "polyhedron(points, faces, convexity)",
+    "parameters": [
+      {
+        "name": "points",
+        "type": "array",
+        "description": "Array of [x,y,z] vertices"
+      },
+      {
+        "name": "faces",
+        "type": "array",
+        "description": "Array of face definitions, each listing point indices (counter-clockwise when viewed from outside)"
+      },
+      {
+        "name": "convexity",
+        "type": "number",
+        "description": "Max number of faces a ray might intersect. Default: 1"
+      }
+    ],
+    "description": "Creates arbitrary 3D shape from vertices and faces. Faces must be defined counter-clockwise when viewed from outside for proper normals.",
+    "examples": [
+      "polyhedron(points=[[0,0,0],[10,0,0],[5,10,0],[5,5,10]], faces=[[0,1,2],[0,3,1],[1,3,2],[2,3,0]]);"
+    ]
+  },
+  {
+    "id": "translate",
+    "category": "Transformations",
+    "signature": "translate(v)",
+    "parameters": [
+      { "name": "v", "type": "[x,y,z]", "description": "Translation vector" }
+    ],
+    "description": "Moves child objects by the specified vector.",
+    "examples": [
+      "translate([10, 0, 5]) cube(10);",
+      "translate([0, 20, 0]) sphere(5);"
+    ]
+  },
+  {
+    "id": "rotate",
+    "category": "Transformations",
+    "signature": "rotate(a, v)",
+    "parameters": [
+      {
+        "name": "a",
+        "type": "number or [x,y,z]",
+        "description": "Angle(s) in degrees. Single value rotates around Z, or [x,y,z] for rotation around each axis"
+      },
+      {
+        "name": "v",
+        "type": "[x,y,z]",
+        "description": "Optional axis vector for single-angle rotation"
+      }
+    ],
+    "description": "Rotates child objects. When a is [x,y,z], rotations applied in order: X, then Y, then Z.",
+    "examples": [
+      "rotate([0, 0, 45]) cube(10);",
+      "rotate(45, [1, 0, 0]) cube(10);",
+      "rotate([90, 0, 45]) cylinder(h=10, r=5);"
+    ]
+  },
+  {
+    "id": "scale",
+    "category": "Transformations",
+    "signature": "scale(v)",
+    "parameters": [
+      {
+        "name": "v",
+        "type": "number or [x,y,z]",
+        "description": "Scale factor(s). Single value scales uniformly."
+      }
+    ],
+    "description": "Scales child objects. Use [x,y,z] for non-uniform scaling. Negative values mirror.",
+    "examples": ["scale(2) sphere(5);", "scale([1, 2, 0.5]) cube(10);"]
+  },
+  {
+    "id": "mirror",
+    "category": "Transformations",
+    "signature": "mirror(v)",
+    "parameters": [
+      {
+        "name": "v",
+        "type": "[x,y,z]",
+        "description": "Normal vector of mirror plane through origin"
+      }
+    ],
+    "description": "Mirrors child objects across a plane through the origin, perpendicular to the given vector.",
+    "examples": [
+      "mirror([1, 0, 0]) cube([10, 20, 5]);",
+      "mirror([0, 1, 0]) translate([5, 5, 0]) sphere(3);"
+    ]
+  },
+  {
+    "id": "union",
+    "category": "Boolean Operations",
+    "signature": "union()",
+    "parameters": [],
+    "description": "Combines multiple objects into one. This is the default behavior when objects are placed together, but explicit union() is needed inside difference() or intersection().",
+    "examples": ["union() { cube(10); translate([5, 5, 5]) sphere(8); }"]
+  },
+  {
+    "id": "difference",
+    "category": "Boolean Operations",
+    "signature": "difference()",
+    "parameters": [],
+    "description": "Subtracts all subsequent children from the first child. The first object is the base, all others are cut away from it.",
+    "examples": [
+      "difference() { cube(20, center=true); sphere(13); }",
+      "difference() { cube(10); translate([5, 5, -1]) cylinder(h=12, r=3); }"
+    ]
+  },
+  {
+    "id": "intersection",
+    "category": "Boolean Operations",
+    "signature": "intersection()",
+    "parameters": [],
+    "description": "Creates geometry where all children overlap. Only the common volume remains.",
+    "examples": ["intersection() { cube(15, center=true); sphere(10); }"]
+  },
+  {
+    "id": "linear_extrude",
+    "category": "Extrusion",
+    "signature": "linear_extrude(height, center, convexity, twist, slices, scale)",
+    "parameters": [
+      { "name": "height", "type": "number", "description": "Extrusion height" },
+      {
+        "name": "center",
+        "type": "boolean",
+        "description": "If true, centers extrusion on z=0"
+      },
+      {
+        "name": "twist",
+        "type": "number",
+        "description": "Degrees to twist over the height"
+      },
+      {
+        "name": "slices",
+        "type": "number",
+        "description": "Number of slices for twist"
+      },
+      {
+        "name": "scale",
+        "type": "number or [x,y]",
+        "description": "Scale factor at top (for tapering)"
+      }
+    ],
+    "description": "Extrudes a 2D shape along the Z axis. Can twist and scale during extrusion.",
+    "examples": [
+      "linear_extrude(height=20) circle(10);",
+      "linear_extrude(height=30, twist=90, slices=50) square(10, center=true);"
+    ]
+  },
+  {
+    "id": "rotate_extrude",
+    "category": "Extrusion",
+    "signature": "rotate_extrude(angle, convexity)",
+    "parameters": [
+      {
+        "name": "angle",
+        "type": "number",
+        "description": "Degrees to rotate (default 360)"
+      },
+      {
+        "name": "convexity",
+        "type": "number",
+        "description": "Max surfaces a ray might hit"
+      }
+    ],
+    "description": "Rotates a 2D shape around the Z axis to create a solid of revolution. The 2D shape must be in the positive X half-plane (x >= 0).",
+    "examples": [
+      "rotate_extrude() translate([10, 0]) circle(3);",
+      "rotate_extrude(angle=180) translate([20, 0]) square([5, 10]);"
+    ]
+  },
+  {
+    "id": "hull",
+    "category": "Boolean Operations",
+    "signature": "hull()",
+    "parameters": [],
+    "description": "Creates the convex hull of all child objects - the smallest convex shape that contains all children. Excellent for creating rounded shapes and smooth transitions.",
+    "examples": [
+      "hull() { cube(10); translate([20, 0, 0]) cube(10); }",
+      "hull() { cylinder(h=1, r=10); translate([0, 0, 20]) sphere(5); }"
+    ]
+  },
+  {
+    "id": "minkowski",
+    "category": "Boolean Operations",
+    "signature": "minkowski()",
+    "parameters": [],
+    "description": "Performs Minkowski sum of children. Commonly used to add rounded edges by 'rolling' a sphere around an object. Very computationally expensive.",
+    "examples": ["minkowski() { cube(10); sphere(2); }"]
+  },
+  {
+    "id": "circle",
+    "category": "2D Primitives",
+    "signature": "circle(r, d)",
+    "parameters": [
+      { "name": "r", "type": "number", "description": "Radius" },
+      {
+        "name": "d",
+        "type": "number",
+        "description": "Diameter (alternative to r)"
+      }
+    ],
+    "description": "Creates a 2D circle. Use $fn to control resolution or create regular polygons.",
+    "examples": ["circle(r=10);", "circle(d=20, $fn=6);"]
+  },
+  {
+    "id": "square",
+    "category": "2D Primitives",
+    "signature": "square(size, center)",
+    "parameters": [
+      {
+        "name": "size",
+        "type": "number or [x,y]",
+        "description": "Single value for square, or [x,y] for rectangle"
+      },
+      {
+        "name": "center",
+        "type": "boolean",
+        "description": "If true, centers on origin"
+      }
+    ],
+    "description": "Creates a 2D square or rectangle.",
+    "examples": ["square(10);", "square([20, 10], center=true);"]
+  },
+  {
+    "id": "polygon",
+    "category": "2D Primitives",
+    "signature": "polygon(points, paths, convexity)",
+    "parameters": [
+      {
+        "name": "points",
+        "type": "array",
+        "description": "Array of [x,y] vertices"
+      },
+      {
+        "name": "paths",
+        "type": "array",
+        "description": "Optional array of paths (for holes). Each path lists point indices."
+      },
+      {
+        "name": "convexity",
+        "type": "number",
+        "description": "Max intersections for rendering"
+      }
+    ],
+    "description": "Creates a 2D polygon from points. Use paths to create polygons with holes.",
+    "examples": [
+      "polygon([[0,0], [10,0], [5,10]]);",
+      "polygon(points=[[0,0],[20,0],[20,20],[0,20],[5,5],[15,5],[15,15],[5,15]], paths=[[0,1,2,3],[4,5,6,7]]);"
+    ]
+  },
+  {
+    "id": "text",
+    "category": "2D Primitives",
+    "signature": "text(text, size, font, halign, valign, spacing, direction, language, script)",
+    "parameters": [
+      {
+        "name": "text",
+        "type": "string",
+        "description": "The text string to render"
+      },
+      {
+        "name": "size",
+        "type": "number",
+        "description": "Font size (approximate height)"
+      },
+      { "name": "font", "type": "string", "description": "Font name" },
+      {
+        "name": "halign",
+        "type": "string",
+        "description": "Horizontal alignment: left, center, right"
+      },
+      {
+        "name": "valign",
+        "type": "string",
+        "description": "Vertical alignment: top, center, baseline, bottom"
+      }
+    ],
+    "description": "Creates 2D text. Extrude with linear_extrude() to make 3D text.",
+    "examples": [
+      "linear_extrude(height=3) text(\"Hello\", size=10, halign=\"center\");"
+    ]
+  },
+  {
+    "id": "import",
+    "category": "Import/Export",
+    "signature": "import(file, convexity, layer)",
+    "parameters": [
+      {
+        "name": "file",
+        "type": "string",
+        "description": "Path to file (STL, OFF, AMF, 3MF, DXF, SVG)"
+      },
+      { "name": "convexity", "type": "number", "description": "For STL files" },
+      {
+        "name": "layer",
+        "type": "string",
+        "description": "For DXF files, which layer to import"
+      }
+    ],
+    "description": "Imports external geometry files. STL/OFF/AMF/3MF for 3D, DXF/SVG for 2D. Path is relative to the .scad file.",
+    "examples": [
+      "import(\"model.stl\");",
+      "linear_extrude(height=5) import(\"outline.dxf\");"
+    ]
+  },
+  {
+    "id": "module",
+    "category": "User Defined",
+    "signature": "module name(parameters) { ... }",
+    "parameters": [
+      {
+        "name": "parameters",
+        "type": "various",
+        "description": "Optional parameters with default values"
+      }
+    ],
+    "description": "Defines a reusable module (like a function that creates geometry). Call it by name. Use children() inside to access passed objects.",
+    "examples": [
+      "module box(w, h, d) { cube([w, h, d]); }\nbox(10, 20, 5);",
+      "module rounded(r) { minkowski() { children(); sphere(r); } }\nrounded(2) cube(10);"
+    ]
+  },
+  {
+    "id": "function",
+    "category": "User Defined",
+    "signature": "function name(parameters) = expression;",
+    "parameters": [
+      {
+        "name": "parameters",
+        "type": "various",
+        "description": "Function parameters"
+      }
+    ],
+    "description": "Defines a function that returns a value. Use for calculations and generating point arrays.",
+    "examples": [
+      "function double(x) = x * 2;",
+      "function circumference(r) = 2 * PI * r;"
+    ]
+  },
+  {
+    "id": "for",
+    "category": "Control Flow",
+    "signature": "for (var = range) { ... }",
+    "parameters": [
+      { "name": "var", "type": "variable", "description": "Loop variable" },
+      {
+        "name": "range",
+        "type": "[start:end] or [start:step:end] or array",
+        "description": "Range or array to iterate"
+      }
+    ],
+    "description": "Creates multiple copies with different parameter values. In OpenSCAD, for creates implicit union of all iterations.",
+    "examples": [
+      "for (i = [0:5]) translate([i*10, 0, 0]) cube(5);",
+      "for (a = [0:30:360]) rotate([0, 0, a]) translate([20, 0, 0]) sphere(3);"
+    ]
+  },
+  {
+    "id": "if",
+    "category": "Control Flow",
+    "signature": "if (condition) { ... } else { ... }",
+    "parameters": [
+      {
+        "name": "condition",
+        "type": "boolean",
+        "description": "Condition to evaluate"
+      }
+    ],
+    "description": "Conditional geometry creation. Else clause is optional.",
+    "examples": ["if (use_sphere) sphere(10); else cube(15, center=true);"]
+  },
+  {
+    "id": "let",
+    "category": "Control Flow",
+    "signature": "let (assignments) expression",
+    "parameters": [
+      {
+        "name": "assignments",
+        "type": "var = value, ...",
+        "description": "Variable assignments"
+      }
+    ],
+    "description": "Creates local variables for use in an expression. Useful in functions and list comprehensions.",
+    "examples": ["function area(r) = let(pi = 3.14159) pi * r * r;"]
+  },
+  {
+    "id": "color",
+    "category": "Transformations",
+    "signature": "color(c, alpha)",
+    "parameters": [
+      {
+        "name": "c",
+        "type": "string or [r,g,b] or [r,g,b,a]",
+        "description": "Color name (e.g., \"red\") or RGB values 0-1"
+      },
+      { "name": "alpha", "type": "number", "description": "Opacity 0-1" }
+    ],
+    "description": "Sets display color for child objects. Does not affect STL export.",
+    "examples": [
+      "color(\"red\") cube(10);",
+      "color([0.5, 0.5, 1]) sphere(5);",
+      "color(\"green\", 0.5) cylinder(h=10, r=5);"
+    ]
+  },
+  {
+    "id": "offset",
+    "category": "2D Operations",
+    "signature": "offset(r, delta, chamfer)",
+    "parameters": [
+      {
+        "name": "r",
+        "type": "number",
+        "description": "Radius for rounded offset (positive=outward, negative=inward)"
+      },
+      {
+        "name": "delta",
+        "type": "number",
+        "description": "Distance for sharp offset"
+      },
+      {
+        "name": "chamfer",
+        "type": "boolean",
+        "description": "If true with delta, chamfers corners instead of extending"
+      }
+    ],
+    "description": "Expands or contracts a 2D shape. Use r for rounded corners, delta for sharp corners.",
+    "examples": ["offset(r=2) square(10);", "offset(delta=-1) circle(10);"]
+  },
+  {
+    "id": "projection",
+    "category": "3D to 2D",
+    "signature": "projection(cut)",
+    "parameters": [
+      {
+        "name": "cut",
+        "type": "boolean",
+        "description": "If true, shows cross-section at z=0. If false, shows shadow/outline."
+      }
+    ],
+    "description": "Creates a 2D projection of 3D objects. Useful for creating outlines or cross-sections.",
+    "examples": [
+      "projection() sphere(10);",
+      "projection(cut=true) translate([0,0,-5]) cube(20, center=true);"
+    ]
+  },
+  {
+    "id": "resize",
+    "category": "Transformations",
+    "signature": "resize(newsize, auto)",
+    "parameters": [
+      {
+        "name": "newsize",
+        "type": "[x,y,z]",
+        "description": "Target dimensions. 0 means auto-scale to maintain ratio."
+      },
+      {
+        "name": "auto",
+        "type": "boolean or [x,y,z]",
+        "description": "Which dimensions to auto-scale"
+      }
+    ],
+    "description": "Resizes object to exact dimensions. Use 0 in newsize with auto=true to maintain aspect ratio.",
+    "examples": ["resize([20, 0, 0], auto=true) sphere(10);"]
+  },
+  {
+    "id": "children",
+    "category": "User Defined",
+    "signature": "children(index)",
+    "parameters": [
+      {
+        "name": "index",
+        "type": "number",
+        "description": "Optional index of specific child. Without index, refers to all children."
+      }
+    ],
+    "description": "Inside a module, refers to objects passed to the module. Enables creating wrapper modules.",
+    "examples": [
+      "module twice() { children(); translate([20,0,0]) children(); }\ntwice() cube(10);"
+    ]
+  },
+  {
+    "id": "$fn",
+    "category": "Special Variables",
+    "signature": "$fn = number",
+    "parameters": [
+      {
+        "name": "number",
+        "type": "integer",
+        "description": "Number of fragments/segments for curves"
+      }
+    ],
+    "description": "Sets the number of fragments for circles, spheres, cylinders. Higher = smoother but slower. Common values: 32 for preview, 64-100 for final render.",
+    "examples": ["$fn = 64;\nsphere(10);", "cylinder(h=10, r=5, $fn=6);"]
+  },
+  {
+    "id": "$fa",
+    "category": "Special Variables",
+    "signature": "$fa = angle",
+    "parameters": [
+      {
+        "name": "angle",
+        "type": "number",
+        "description": "Minimum angle for a fragment (default 12)"
+      }
+    ],
+    "description": "Minimum angle for each fragment of circles/arcs. Used with $fs when $fn is 0.",
+    "examples": ["$fa = 1; $fs = 0.5; sphere(10);"]
+  },
+  {
+    "id": "$fs",
+    "category": "Special Variables",
+    "signature": "$fs = size",
+    "parameters": [
+      {
+        "name": "size",
+        "type": "number",
+        "description": "Minimum size of a fragment (default 2)"
+      }
+    ],
+    "description": "Minimum size for each fragment. Prevents excessive tessellation on large objects.",
+    "examples": ["$fs = 0.5; cylinder(h=100, r=50);"]
+  }
+]

@@ -102,7 +102,9 @@ export function AssistantMessage({
           ) : (
             <>
               {message.content.text && (
-                <span className="px-1">{message.content.text}</span>
+                <span className="block break-words px-1">
+                  {message.content.text}
+                </span>
               )}
               {message.content.toolCalls &&
                 message.content.toolCalls.length > 0 && (
@@ -269,9 +271,11 @@ function ObjectButton({
       onClick={() => setCurrentMessage(message)}
     >
       <div className="flex w-full items-center justify-between border-gray-200/20 pr-16 dark:border-gray-700">
-        <div className="flex items-center space-x-2">
-          <Box className="h-4 w-4 text-adam-text-primary" />
-          <span className="font-medium text-adam-text-primary">{title}</span>
+        <div className="flex min-w-0 items-center space-x-2">
+          <Box className="h-4 w-4 shrink-0 text-adam-text-primary" />
+          <span className="truncate font-medium text-adam-text-primary">
+            {title}
+          </span>
         </div>
         <span
           className={cn(

@@ -30,6 +30,79 @@ function escapeRegExp(string: string): string {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+// Helper to detect and extract OpenSCAD code from text response
+// This handles cases where the LLM outputs code directly instead of using tools
+function extractOpenSCADCodeFromText(text: string): string | null {
+  if (!text) return null;
+
+  // First try to extract from markdown code blocks
+  // Match ```openscad ... ``` or ``` ... ``` containing OpenSCAD-like code
+  const codeBlockRegex = /```(?:openscad)?\s*\n?([\s\S]*?)\n?```/g;
+  let match;
+  let bestCode: string | null = null;
+  let bestScore = 0;
+
+  while ((match = codeBlockRegex.exec(text)) !== null) {
+    const code = match[1].trim();
+    const score = scoreOpenSCADCode(code);
+    if (score > bestScore) {
+      bestScore = score;
+      bestCode = code;
+    }
+  }
+
+  // If we found code in a code block with a good score, return it
+  if (bestCode && bestScore >= 3) {
+    return bestCode;
+  }
+
+  // If no code blocks, check if the entire text looks like OpenSCAD code
+  // This handles cases where the model outputs raw code without markdown
+  const rawScore = scoreOpenSCADCode(text);
+  if (rawScore >= 5) {
+    // Higher threshold for raw text
+    return text.trim();
+  }
+
+  return null;
+}
+
+// Score how likely text is to be OpenSCAD code
+function scoreOpenSCADCode(code: string): number {
+  if (!code || code.length < 20) return 0;
+
+  let score = 0;
+
+  // OpenSCAD-specific keywords and patterns
+  const patterns = [
+    /\b(cube|sphere|cylinder|polyhedron)\s*\(/gi, // Primitives
+    /\b(union|difference|intersection)\s*\(\s*\)/gi, // Boolean ops
+    /\b(translate|rotate|scale|mirror)\s*\(/gi, // Transformations
+    /\b(linear_extrude|rotate_extrude)\s*\(/gi, // Extrusions
+    /\b(module|function)\s+\w+\s*\(/gi, // Modules and functions
+    /\$fn\s*=/gi, // Special variables
+    /\bfor\s*\(\s*\w+\s*=\s*\[/gi, // For loops OpenSCAD style
+    /\bimport\s*\(\s*"/gi, // Import statements
+    /;\s*$/gm, // Semicolon line endings (common in OpenSCAD)
+    /\/\/.*$/gm, // Single-line comments
+  ];
+
+  for (const pattern of patterns) {
+    const matches = code.match(pattern);
+    if (matches) {
+      score += matches.length;
+    }
+  }
+
+  // Variable declarations with = and ; are common
+  const varDeclarations = code.match(/^\s*\w+\s*=\s*[^;]+;/gm);
+  if (varDeclarations) {
+    score += Math.min(varDeclarations.length, 5); // Cap contribution
+  }
+
+  return score;
+}
+
 // Helper to mark a tool as error and avoid duplication
 function markToolAsError(content: Content, toolId: string): Content {
   return {
@@ -101,13 +174,12 @@ async function generateTitleFromMessages(
   messagesToSend: OpenAIMessage[],
 ): Promise<string> {
   try {
-    const titleSystemPrompt = `You are a helpful assistant that generates concise, descriptive titles for 3D objects based on a user's description, conversation context, and any reference images. Your titles should be:
-1. Brief (under 27 characters)
-2. Descriptive of the object
-3. Clear and professional
-4. Without any special formatting or punctuation at the beginning or end
-5. Consider the entire conversation context, not just the latest message
-6. When images are provided, incorporate visual elements you can see into the title`;
+    const titleSystemPrompt = `Generate a short title for a 3D object. Rules:
+- Maximum 25 characters
+- Just the object name, nothing else
+- No explanations, notes, or commentary
+- No quotes or special formatting
+- Examples: "Coffee Mug", "Gear Assembly", "Phone Stand"`;
 
     const response = await fetch(OPENROUTER_API_URL, {
       method: 'POST',
@@ -119,14 +191,13 @@ async function generateTitleFromMessages(
       },
       body: JSON.stringify({
         model: 'anthropic/claude-3.5-haiku',
-        max_tokens: 100,
+        max_tokens: 30,
         messages: [
           { role: 'system', content: titleSystemPrompt },
           ...messagesToSend,
           {
             role: 'user',
-            content:
-              'Generate a concise title for the 3D object that will be generated based on the previous messages.',
+            content: 'Title:',
           },
         ],
       }),
@@ -139,7 +210,28 @@ async function generateTitleFromMessages(
     const data = await response.json();
     if (data.choices && data.choices[0]?.message?.content) {
       let title = data.choices[0].message.content.trim();
-      if (title.length > 60) title = title.substring(0, 57) + '...';
+
+      // Clean up common LLM artifacts
+      // Remove quotes
+      title = title.replace(/^["']|["']$/g, '');
+      // Remove "Title:" prefix if model echoed it
+      title = title.replace(/^title:\s*/i, '');
+      // Remove any trailing punctuation except necessary ones
+      title = title.replace(/[.!?:;,]+$/, '');
+      // Remove meta-commentary patterns
+      title = title.replace(
+        /\s*(note[s]?|here'?s?|based on|for the|this is).*$/i,
+        '',
+      );
+      // Trim again after cleanup
+      title = title.trim();
+
+      // Enforce max length
+      if (title.length > 27) title = title.substring(0, 24) + '...';
+
+      // If title is empty or too short after cleanup, return null to use fallback
+      if (title.length < 2) return 'Adam Object';
+
       return title;
     }
   } catch (error) {
@@ -642,6 +734,43 @@ Deno.serve(async (req) => {
           }
           markAllToolsError();
         } finally {
+          // Fallback: If no artifact was created but text contains OpenSCAD code,
+          // extract it and create an artifact. This handles cases where the LLM
+          // outputs code directly instead of using tools (common in long conversations).
+          if (!content.artifact && content.text) {
+            const extractedCode = extractOpenSCADCodeFromText(content.text);
+            if (extractedCode) {
+              console.log(
+                'Fallback: Extracted OpenSCAD code from text response',
+              );
+
+              // Generate a title from the messages
+              const title = await generateTitleFromMessages(messagesToSend);
+
+              // Remove the code from the text (keep any non-code explanation)
+              let cleanedText = content.text;
+              // Remove markdown code blocks
+              cleanedText = cleanedText
+                .replace(/```(?:openscad)?\s*\n?[\s\S]*?\n?```/g, '')
+                .trim();
+              // If what remains is very short or empty, clear it
+              if (cleanedText.length < 10) {
+                cleanedText = '';
+              }
+
+              content = {
+                ...content,
+                text: cleanedText || undefined,
+                artifact: {
+                  title,
+                  version: 'v1',
+                  code: extractedCode,
+                  parameters: parseParameters(extractedCode),
+                },
+              };
+            }
+          }
+
           const { data: finalMessageData } = await supabaseClient
             .from('messages')
             .update({ content })

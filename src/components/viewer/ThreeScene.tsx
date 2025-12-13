@@ -15,7 +15,7 @@ import { useColor } from '@/contexts/ColorContext';
 
 export function ThreeScene({ geometry }: { geometry: THREE.BufferGeometry }) {
   const { color } = useColor();
-  const [isOrthographic, setIsOrthographic] = useState(false);
+  const [isOrthographic, setIsOrthographic] = useState(true);
 
   return (
     <div className="relative h-full w-full overflow-hidden">
@@ -73,7 +73,7 @@ export function ThreeScene({ geometry }: { geometry: THREE.BufferGeometry }) {
           infiniteGrid={true}
         /> */}
         <OrbitControls makeDefault enableDamping={true} dampingFactor={0.05} />
-        <GizmoHelper alignment="bottom-right" margin={[80, 80]}>
+        <GizmoHelper alignment="bottom-right" margin={[80, 90]}>
           <GizmoViewcube />
         </GizmoHelper>
       </Canvas>

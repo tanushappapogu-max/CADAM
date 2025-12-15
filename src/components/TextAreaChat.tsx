@@ -13,11 +13,17 @@ import {
   Loader2,
   CircleX,
   Box,
+  Wand2,
 } from 'lucide-react';
 import { cn, PARAMETRIC_MODELS } from '@/lib/utils';
 import { Content, Conversation, Model } from '@shared/types';
 import { MessageItem } from '@/types/misc';
 import { useToast } from '@/hooks/use-toast';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { useMutation } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { ModelSelector } from './ModelSelector';
@@ -36,6 +42,7 @@ interface TextAreaChatProps {
   model: Model;
   setModel: (model: Model) => void;
   conversation: Pick<Conversation, 'id' | 'user_id'>;
+  showPromptGenerator?: boolean;
 }
 
 const VALID_IMAGE_FORMATS = [
@@ -52,12 +59,14 @@ function TextAreaChat({
   model,
   setModel,
   conversation,
+  showPromptGenerator = false,
 }: TextAreaChatProps) {
   const [isFocused, setIsFocused] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [input, setInput] = useState('');
   const [isDragging, setIsDragging] = useState(false);
   const [isDragHover, setIsDragHover] = useState(false);
+  const [isGeneratingPrompt, setIsGeneratingPrompt] = useState(false);
   const [dropMessageOpacityClass, setDropMessageOpacityClass] = useState(
     'opacity-0 pointer-events-none',
   );
@@ -496,6 +505,37 @@ function TextAreaChat({
     }
   };
 
+  const generatePrompt = async () => {
+    if (isGeneratingPrompt) return;
+    setIsGeneratingPrompt(true);
+    try {
+      const { data, error } = await supabase.functions.invoke(
+        'prompt-generator',
+        {
+          method: 'POST',
+          body: {
+            existingText: input.trim() || null,
+            type: 'parametric',
+          },
+        },
+      );
+
+      if (error) throw error;
+      if (!data?.prompt) throw new Error('No prompt generated');
+
+      setInput(data.prompt);
+    } catch (error) {
+      console.error('Error generating prompt:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to generate prompt',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsGeneratingPrompt(false);
+    }
+  };
+
   // Add global drag-and-drop listeners so that dropping files anywhere on the page is handled.
   useEffect(() => {
     // Prevent default browser behaviour (e.g. opening the image in a new tab)
@@ -831,6 +871,31 @@ function TextAreaChat({
               <br />
             </div>
           </div>
+          {showPromptGenerator && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 flex-shrink-0 rounded-full hover:bg-adam-neutral-800"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    generatePrompt();
+                  }}
+                  disabled={isGeneratingPrompt || disabled}
+                >
+                  {isGeneratingPrompt ? (
+                    <Loader2 className="h-4 w-4 animate-spin text-adam-blue" />
+                  ) : (
+                    <Wand2 className="h-4 w-4 text-gray-400 transition-colors duration-200 hover:text-white" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {input.trim() ? 'Enhance Prompt' : 'Generate Prompt'}
+              </TooltipContent>
+            </Tooltip>
+          )}
         </div>
         <div className="flex items-center justify-between border-t border-[#2a2a2a] p-3">
           <div className="flex items-center gap-3">

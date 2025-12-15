@@ -164,6 +164,7 @@ export function PromptView() {
                   placeholder="Start building with Adam..."
                   model={model}
                   setModel={setModel}
+                  showPromptGenerator={true}
                 />
               </SelectedItemsContext.Provider>
               <div className="relative">

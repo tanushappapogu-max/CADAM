@@ -175,21 +175,26 @@ async function generateParametricSuggestions(
   userPrompt: string,
 ): Promise<string[]> {
   try {
-    const suggestionPrompt = `The user just asked me to create or modify: "${userPrompt}"
+    const suggestionPrompt = `You are helping a user iterate on a 3D CAD model they just created. They asked for: "${userPrompt}"
 
-Give me exactly 3 creative and helpful next-step suggestions for parametric edits the user could try next.
+Generate exactly 2 short, specific follow-up suggestions that would meaningfully improve or customize this model.
 
-Examples:
-- For "a mug": <suggestion>Taper mug</suggestion>, <suggestion>Square handle</suggestion>, <suggestion>Increase resolution</suggestion>
-- For "a box": <suggestion>Round corners</suggestion>, <suggestion>Add lid</suggestion>, <suggestion>Hollow out</suggestion>
-- For "a gear": <suggestion>More teeth</suggestion>, <suggestion>10mm pitch</suggestion>, <suggestion>Add hub</suggestion>
+Good suggestions are:
+- Specific modifications relevant to THIS object (not generic)
+- Action-oriented (what to change, not questions)
+- 2-4 words max
+- Practical for 3D printing or CAD
 
-IMPORTANT:
-- Each suggestion must be exactly 2 short words (no more, no less)
-- Focus on geometric or dimensional edits suitable for parametric CAD
-- Use neutral phrasing, avoid file export or rendering topics
+Examples by object type:
+- Mug → "Add thumb grip", "Wider base"
+- Phone stand → "Steeper angle", "Add cable slot"  
+- Box → "Rounded corners", "Add hinged lid"
+- Gear → "Fewer teeth", "Thicker hub"
+- Bracket → "Add reinforcement", "Countersunk holes"
 
-Output format: Return exactly 3 suggestions, each wrapped in <suggestion></suggestion> tags.`;
+Return exactly 2 suggestions in this format:
+<suggestion>First suggestion</suggestion>
+<suggestion>Second suggestion</suggestion>`;
 
     const response = await fetch(OPENROUTER_API_URL, {
       method: 'POST',
@@ -201,7 +206,7 @@ Output format: Return exactly 3 suggestions, each wrapped in <suggestion></sugge
       },
       body: JSON.stringify({
         model: 'anthropic/claude-3.5-haiku',
-        max_tokens: 150,
+        max_tokens: 100,
         messages: [
           {
             role: 'user',
@@ -231,9 +236,9 @@ Output format: Return exactly 3 suggestions, each wrapped in <suggestion></sugge
                 .replace(/[""'']/g, '')
                 .replace(/^["']|["']$/g, '')
                 .trim();
-              // Enforce 2 word limit
+              // Enforce max 5 words
               const words = cleaned.split(/\s+/);
-              if (words.length > 3) return null;
+              if (words.length > 5) return null;
               // Title case
               return words
                 .map(
@@ -243,22 +248,7 @@ Output format: Return exactly 3 suggestions, each wrapped in <suggestion></sugge
             })
             .filter((s): s is string => s !== null && s.length > 0),
         ),
-      ).slice(0, 3);
-
-      // Fallback suggestions if we didn't get enough valid ones
-      if (normalized.length < 3) {
-        const fallbacks = [
-          'Increase Resolution',
-          'Add Parameters',
-          'Try Again',
-        ];
-        while (normalized.length < 3 && fallbacks.length > 0) {
-          const fallback = fallbacks.shift()!;
-          if (!normalized.includes(fallback)) {
-            normalized.push(fallback);
-          }
-        }
-      }
+      ).slice(0, 2);
 
       return normalized;
     }

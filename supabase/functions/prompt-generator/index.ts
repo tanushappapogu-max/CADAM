@@ -9,27 +9,27 @@ import { corsHeaders } from '../_shared/cors.ts';
 import 'jsr:@std/dotenv/load';
 import { getAnonSupabaseClient } from '../_shared/supabaseClient.ts';
 
-const PARAMETRIC_SYSTEM_PROMPT = `You are a helpful assistant that generates prompts for dimensional household objects and functional parts. Your prompts should be:
-1. Focus on practical household items and functional parts
-2. Include specific dimensions when relevant
-3. Be concise and practical
-4. Think containers, holders, brackets, everyday objects
+const PARAMETRIC_SYSTEM_PROMPT = `You are a helpful assistant that generates prompts for 3D printable parametric objects. Your prompts should:
+1. Focus on practical household items, tools, and organizers
+2. Include specific dimensions (in mm) for key features
+3. Mention customizable/parametric aspects (e.g. "adjustable width", "configurable holes")
+4. Describe geometry that is 3D printable (flat bases, reasonable overhangs)
 5. Return ONLY the prompt text without any introductory phrases or quotes
 
 Here are some examples:
 
 User: "Generate a parametric modeling prompt."
-Assistant: "a plant pot with 4 drainage holes and a 30mm diameter"
+Assistant: "a parametric hex-grid drawer organizer 150x50mm with adjustable wall thickness"
 User: "Generate a parametric modeling prompt."
-Assistant: "a phone stand with 15 degree angle and cable slot"
+Assistant: "a customizable phone stand with adjustable viewing angle and charging cable slot"
 User: "Generate a parametric modeling prompt."
-Assistant: "a pen holder cup 80mm diameter with pencil slots"
+Assistant: "a parametric rug spike with 4 holes for 3mm screws"
 User: "Generate a parametric modeling prompt."
-Assistant: "a wall bracket 120mm wide with two 6mm screw holes"
+Assistant: "a wall-mounted tool holder with 5 variable-diameter slots"
 User: "Generate a parametric modeling prompt."
-Assistant: "a drawer organizer tray 200x100mm with compartments"
+Assistant: "a stackable storage box 100mm cube with slide-on lid"
 User: "Generate a parametric modeling prompt."
-Assistant: "a cable management clip for 8mm cables"
+Assistant: "a parametric cable clip for 5-10mm cables with screw mounting"
 `;
 
 // Main server function handling incoming requests
@@ -89,23 +89,23 @@ Deno.serve(async (req) => {
 
     if (existingText && existingText.length > 0) {
       // Augment existing text for parametric mode
-      systemPrompt = `You are a technical writing assistant specialized in enhancing prompts for dimensional household objects and functional parts. When given an existing prompt, you should:
+      systemPrompt = `You are a technical writing assistant specialized in enhancing prompts for 3D printable parametric models. When given an existing prompt, you should:
 
 1. Add specific dimensions (in mm) where practical and missing
-2. Include functional details like holes, slots, angles, or compartments
-3. Focus on practical household use cases and functionality
-4. Make it more precise for creating useful everyday objects
-5. Maintain the original intent and core concept
-6. Keep it concise and practical
+2. Identify parametric variables (e.g., "customizable height", "variable screw size")
+3. Ensure the design is 3D printable (flat bottom, stable geometry)
+4. Focus on practical utility and clean geometry
+5. Maintain the original intent while making it more specific
+6. Keep it concise
 7. Return ONLY the enhanced prompt text without any introductory phrases, explanations, or quotes
 
-The enhanced prompt should be more functional and dimensional while staying true to the user's vision.`;
+The enhanced prompt should be ready for a parametric CAD generator.`;
 
-      userPrompt = `Please enhance and expand this household object prompt to make it more functional, dimensional, and practical for everyday use:
+      userPrompt = `Please enhance this prompt to be a specific, dimensioned, and parametric 3D printable object:
 
 ${JSON.stringify(existingText)}
 
-Return only the enhanced prompt text, no introductory phrases.`;
+Return only the enhanced prompt text.`;
     } else {
       // Generate new prompt for parametric mode
       systemPrompt = PARAMETRIC_SYSTEM_PROMPT;

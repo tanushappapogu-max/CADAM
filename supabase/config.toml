@@ -28,8 +28,8 @@ enable_confirmations = true
 
 [auth.external.google]
 enabled = true
-client_id = env(GOOGLE_CLIENT_ID)
-secret = env(GOOGLE_SECRET)
+client_id = "env(GOOGLE_CLIENT_ID)"
+secret = "env(GOOGLE_SECRET)"
 
 [functions.chat]
 enabled = true

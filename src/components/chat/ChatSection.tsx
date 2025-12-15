@@ -73,12 +73,16 @@ export function ChatSection({ messages }: ChatSectionProps) {
   // Get suggestions from the last assistant message
   const suggestions = useMemo(() => {
     if (isLoading) return [];
+    // Find the last assistant message (not just lastMessage which could be user)
+    const lastAssistantMsg = [...messages]
+      .reverse()
+      .find((m) => m.role === 'assistant');
     return (
-      lastMessage?.content?.artifact?.suggestions ||
-      lastMessage?.content?.suggestions ||
+      lastAssistantMsg?.content?.artifact?.suggestions ||
+      lastAssistantMsg?.content?.suggestions ||
       []
     );
-  }, [lastMessage, isLoading]);
+  }, [messages, isLoading]);
 
   const handleSuggestionSelect = useCallback(
     (suggestion: string) => {

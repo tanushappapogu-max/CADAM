@@ -15,21 +15,22 @@ const PARAMETRIC_SYSTEM_PROMPT = `You are a helpful assistant that generates pro
 3. Mention customizable/parametric aspects (e.g. "adjustable width", "configurable holes")
 4. Describe geometry that is 3D printable (flat bases, reasonable overhangs)
 5. Return ONLY the prompt text without any introductory phrases or quotes
+6. Vary your sentence structure. Do NOT start every prompt with "a parametric..."
 
 Here are some examples:
 
 User: "Generate a parametric modeling prompt."
-Assistant: "a parametric hex-grid drawer organizer 150x50mm with adjustable wall thickness"
+Assistant: "a hex-grid drawer organizer 150x50mm with adjustable wall thickness"
 User: "Generate a parametric modeling prompt."
 Assistant: "a customizable phone stand with adjustable viewing angle and charging cable slot"
 User: "Generate a parametric modeling prompt."
-Assistant: "a parametric rug spike with 4 holes for 3mm screws"
+Assistant: "rug spike with 4 mounting holes for 3mm screws"
 User: "Generate a parametric modeling prompt."
 Assistant: "a wall-mounted tool holder with 5 variable-diameter slots"
 User: "Generate a parametric modeling prompt."
-Assistant: "a stackable storage box 100mm cube with slide-on lid"
+Assistant: "stackable storage box 100mm cube with slide-on lid"
 User: "Generate a parametric modeling prompt."
-Assistant: "a parametric cable clip for 5-10mm cables with screw mounting"
+Assistant: "cable clip for 5-10mm cables with screw mounting"
 `;
 
 // Main server function handling incoming requests

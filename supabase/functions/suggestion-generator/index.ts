@@ -14,7 +14,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { userPrompt, generatedCode, parameters } = await req.json();
+    const { userPrompt, generatedCode } = await req.json();
 
     if (!userPrompt) {
       return new Response(JSON.stringify({ suggestions: [] }), {
@@ -22,40 +22,34 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Build parameter summary for context
-    const paramSummary = parameters
-      ?.map(
-        (p: { name: string; value: string | number | boolean }) =>
-          `${p.name}=${p.value}`,
-      )
-      .join(', ');
-
     const suggestionPrompt = `You are helping a user iterate on a 3D CAD model. 
 
 USER REQUEST: "${userPrompt}"
-
-CURRENT PARAMETERS: ${paramSummary || 'none'}
 
 GENERATED CODE:
 \`\`\`openscad
 ${generatedCode?.slice(0, 1500) || 'No code available'}
 \`\`\`
 
-Based on the ACTUAL model above, suggest exactly 2 specific improvements the user could make next.
+Suggest exactly 2 NEW FEATURES to add to this model. Focus on structural additions, not parameter tweaks.
 
-Your suggestions should:
-- Reference actual parameters or features in the code (e.g., if there's cup_height, suggest "Taller cup" not generic "Make bigger")
-- Be actionable modifications (2-4 words)
-- Be different from each other (one could adjust a dimension, another could add a feature)
+Good suggestions ADD something new:
+- "Add handle" - adds a new part
+- "Add mounting holes" - adds functional feature
+- "Add lid" - adds new component
+- "Hollow it out" - structural change
+- "Add feet" - adds new elements
+- "Round the edges" - adds fillets/chamfers
 
 DO NOT suggest:
-- Generic things like "Add more detail" or "Improve design"
-- Exporting, rendering, or color changes
-- Things already in the model
+- Parameter adjustments (taller, wider, thicker, bigger, smaller)
+- Generic improvements ("Add detail", "Improve design")
+- Exporting, rendering, or colors
+- Things already visible in the code
 
-Return exactly 2 suggestions:
-<suggestion>First suggestion</suggestion>
-<suggestion>Second suggestion</suggestion>`;
+Return exactly 2 suggestions (2-4 words each):
+<suggestion>First new feature</suggestion>
+<suggestion>Second new feature</suggestion>`;
 
     const response = await fetch(OPENROUTER_API_URL, {
       method: 'POST',

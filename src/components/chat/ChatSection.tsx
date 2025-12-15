@@ -101,7 +101,6 @@ export function ChatSection({ messages }: ChatSectionProps) {
 
     // Get the generated code for context
     const generatedCode = lastMsg.content.artifact.code;
-    const parameters = lastMsg.content.artifact.parameters;
 
     // Generate suggestions
     const generateSuggestions = async () => {
@@ -112,7 +111,6 @@ export function ChatSection({ messages }: ChatSectionProps) {
             body: {
               userPrompt,
               generatedCode,
-              parameters,
             },
           },
         );

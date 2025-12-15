@@ -11,6 +11,7 @@ import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
 import { ConditionalWrapper } from './ConditionalWrapper';
 import { Conversation } from '@shared/types';
+import { AuthButton } from './auth/AuthButton';
 
 interface SidebarProps {
   isSidebarOpen: boolean;
@@ -262,6 +263,7 @@ export function Sidebar({ isSidebarOpen }: SidebarProps) {
               </Button>
             </Link>
           </ConditionalWrapper>
+          <AuthButton isSidebarOpen={isSidebarOpen} />
         </div>
       </div>
     </div>

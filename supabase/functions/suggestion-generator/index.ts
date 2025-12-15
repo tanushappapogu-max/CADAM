@@ -14,7 +14,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { userPrompt } = await req.json();
+    const { userPrompt, generatedCode, parameters } = await req.json();
 
     if (!userPrompt) {
       return new Response(JSON.stringify({ suggestions: [] }), {
@@ -22,24 +22,38 @@ Deno.serve(async (req) => {
       });
     }
 
-    const suggestionPrompt = `You are helping a user iterate on a 3D CAD model they just created. They asked for: "${userPrompt}"
+    // Build parameter summary for context
+    const paramSummary = parameters
+      ?.map(
+        (p: { name: string; value: string | number | boolean }) =>
+          `${p.name}=${p.value}`,
+      )
+      .join(', ');
 
-Generate exactly 2 short, specific follow-up suggestions that would meaningfully improve or customize this model.
+    const suggestionPrompt = `You are helping a user iterate on a 3D CAD model. 
 
-Good suggestions are:
-- Specific modifications relevant to THIS object (not generic)
-- Action-oriented (what to change, not questions)
-- 2-4 words max
-- Practical for 3D printing or CAD
+USER REQUEST: "${userPrompt}"
 
-Examples by object type:
-- Mug → "Add thumb grip", "Wider base"
-- Phone stand → "Steeper angle", "Add cable slot"  
-- Box → "Rounded corners", "Add hinged lid"
-- Gear → "Fewer teeth", "Thicker hub"
-- Bracket → "Add reinforcement", "Countersunk holes"
+CURRENT PARAMETERS: ${paramSummary || 'none'}
 
-Return exactly 2 suggestions in this format:
+GENERATED CODE:
+\`\`\`openscad
+${generatedCode?.slice(0, 1500) || 'No code available'}
+\`\`\`
+
+Based on the ACTUAL model above, suggest exactly 2 specific improvements the user could make next.
+
+Your suggestions should:
+- Reference actual parameters or features in the code (e.g., if there's cup_height, suggest "Taller cup" not generic "Make bigger")
+- Be actionable modifications (2-4 words)
+- Be different from each other (one could adjust a dimension, another could add a feature)
+
+DO NOT suggest:
+- Generic things like "Add more detail" or "Improve design"
+- Exporting, rendering, or color changes
+- Things already in the model
+
+Return exactly 2 suggestions:
 <suggestion>First suggestion</suggestion>
 <suggestion>Second suggestion</suggestion>`;
 

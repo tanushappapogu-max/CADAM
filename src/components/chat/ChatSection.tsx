@@ -99,13 +99,21 @@ export function ChatSection({ messages }: ChatSectionProps) {
       return;
     }
 
+    // Get the generated code for context
+    const generatedCode = lastMsg.content.artifact.code;
+    const parameters = lastMsg.content.artifact.parameters;
+
     // Generate suggestions
     const generateSuggestions = async () => {
       try {
         const { data, error } = await supabase.functions.invoke(
           'suggestion-generator',
           {
-            body: { userPrompt },
+            body: {
+              userPrompt,
+              generatedCode,
+              parameters,
+            },
           },
         );
 

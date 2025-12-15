@@ -102,6 +102,9 @@ export function ChatSection({ messages }: ChatSectionProps) {
     // Get the generated code for context
     const generatedCode = lastMsg.content.artifact.code;
 
+    // Track if this effect has been cancelled (for race condition handling)
+    let cancelled = false;
+
     // Generate suggestions
     const generateSuggestions = async () => {
       try {
@@ -115,17 +118,26 @@ export function ChatSection({ messages }: ChatSectionProps) {
           },
         );
 
+        // Don't update state if this request was superseded
+        if (cancelled) return;
+
         if (error) throw error;
         if (data?.suggestions) {
           setSuggestions(data.suggestions);
         }
       } catch (err) {
+        if (cancelled) return;
         console.error('Failed to generate suggestions:', err);
         setSuggestions([]);
       }
     };
 
     generateSuggestions();
+
+    // Cleanup: cancel this request if effect re-runs
+    return () => {
+      cancelled = true;
+    };
   }, [isLoading, lastUserMessage, messages]);
 
   const handleSuggestionSelect = useCallback(

@@ -16,9 +16,9 @@ export function SuggestionPills({
 
   return (
     <div className="scrollbar-hide flex gap-2 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-      {suggestions.map((suggestion, index) => (
+      {suggestions.map((suggestion) => (
         <Button
-          key={index}
+          key={suggestion}
           variant="outline"
           size="sm"
           className={cn(

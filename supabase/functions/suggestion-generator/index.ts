@@ -1,5 +1,6 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { corsHeaders } from '../_shared/cors.ts';
+import { getAnonSupabaseClient } from '../_shared/supabaseClient.ts';
 
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const OPENROUTER_API_KEY = Deno.env.get('OPENROUTER_API_KEY') ?? '';
@@ -11,6 +12,36 @@ Deno.serve(async (req) => {
 
   if (req.method !== 'POST') {
     return new Response('Method not allowed', { status: 405 });
+  }
+
+  // Authenticate user
+  const supabaseClient = getAnonSupabaseClient({
+    global: {
+      headers: { Authorization: req.headers.get('Authorization') ?? '' },
+    },
+  });
+
+  const { data: userData, error: userError } =
+    await supabaseClient.auth.getUser();
+
+  if (!userData.user) {
+    return new Response(
+      JSON.stringify({ error: { message: 'Unauthorized' } }),
+      {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      },
+    );
+  }
+
+  if (userError) {
+    return new Response(
+      JSON.stringify({ error: { message: userError.message } }),
+      {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      },
+    );
   }
 
   try {

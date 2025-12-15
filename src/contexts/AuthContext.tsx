@@ -5,6 +5,10 @@ interface AuthContextType {
   session: Session | null;
   user: User | null;
   isLoading: boolean;
+  signOut: () => Promise<void>;
+  signInWithEmail: (email: string) => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
+  verifyOtp: (email: string, token: string) => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(

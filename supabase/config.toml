@@ -7,7 +7,7 @@ project_id = "cadam"
 enabled = false
 
 [inbucket]
-enabled = false
+enabled = true
 
 [storage]
 enabled = true
@@ -21,6 +21,15 @@ allowed_mime_types = ["image/png", "image/jpeg", "image/jpg", "image/webp", "mod
 
 [auth]
 enable_anonymous_sign_ins = true
+enable_manual_linking = true
+
+[auth.email]
+enable_confirmations = true
+
+[auth.external.google]
+enabled = true
+client_id = env(GOOGLE_CLIENT_ID)
+secret = env(GOOGLE_SECRET)
 
 [functions.chat]
 enabled = true

@@ -37,6 +37,8 @@ export type Content = {
   // For streaming support - shows in-progress tool calls
   toolCalls?: ToolCall[];
   thinking?: boolean;
+  // AI-generated follow-up suggestions
+  suggestions?: string[];
 };
 
 export type MeshFileType = string;
@@ -57,6 +59,7 @@ export type ParametricArtifact = {
   version: string;
   code: string;
   parameters: Parameter[];
+  suggestions?: string[];
 };
 
 export type ParameterOption = { value: string | number; label: string };

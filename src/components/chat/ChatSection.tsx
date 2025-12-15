@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Message, Model } from '@shared/types';
 import TextAreaChat from '@/components/TextAreaChat';
+import { SuggestionPills } from '@/components/chat/SuggestionPills';
 import { AssistantMessage } from '@/components/chat/AssistantMessage';
 import { UserMessage } from '@/components/chat/UserMessage';
 import { useConversation } from '@/services/conversationService';
@@ -28,7 +29,9 @@ export function ChatSection({ messages }: ChatSectionProps) {
   // Sync model selection with the conversation history (last used model)
   useEffect(() => {
     if (messages.length > 0) {
-      const lastAssistantMessage = [...messages].reverse().find((m) => m.role === 'assistant');
+      const lastAssistantMessage = [...messages]
+        .reverse()
+        .find((m) => m.role === 'assistant');
       if (lastAssistantMessage?.content?.model) {
         setModel(lastAssistantMessage.content.model);
       }
@@ -66,6 +69,26 @@ export function ChatSection({ messages }: ChatSectionProps) {
     }
     return messages[messages.length - 1];
   }, [messages, conversation.current_message_leaf_id]);
+
+  // Get suggestions from the last assistant message
+  const suggestions = useMemo(() => {
+    if (isLoading) return [];
+    return (
+      lastMessage?.content?.artifact?.suggestions ||
+      lastMessage?.content?.suggestions ||
+      []
+    );
+  }, [lastMessage, isLoading]);
+
+  const handleSuggestionSelect = useCallback(
+    (suggestion: string) => {
+      sendMessage({
+        text: suggestion,
+        model: model,
+      });
+    },
+    [model, sendMessage],
+  );
 
   // Get the current version number based on assistant messages only
   const getCurrentVersion = useCallback(
@@ -111,6 +134,11 @@ export function ChatSection({ messages }: ChatSectionProps) {
         </div>
       </ScrollArea>
       <div className="w-full min-w-52 max-w-xl bg-transparent px-4 pb-6">
+        <SuggestionPills
+          suggestions={suggestions}
+          onSelect={handleSuggestionSelect}
+          disabled={isLoading}
+        />
         <TextAreaChat
           onSubmit={sendMessage}
           placeholder="Keep iterating with Adam..."

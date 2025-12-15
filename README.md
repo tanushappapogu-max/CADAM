@@ -23,9 +23,6 @@
 [![Follow Aaron Li](https://img.shields.io/badge/Follow-Aaron%20Li-1DA1F2?style=flat&logo=x&logoColor=white)](https://x.com/aaronhetengli)
 [![Follow Dylan Anderson](https://img.shields.io/badge/Follow-tsadpbb-1DA1F2?style=flat&logo=x&logoColor=white)](https://x.com/tsadpbb)
 
-
-
-
 </div>
 
 ---
@@ -40,14 +37,14 @@
 
 ## 🎯 Key Capabilities
 
-| Feature | Description |
-|---------|-------------|
-| **Natural Language Input** | Describe your 3D model in plain English |
-| **Image References** | Upload images to guide model generation |
-| **Real-time Preview** | See your model update instantly with Three.js |
-| **Parameter Extraction** | Automatically identifies adjustable dimensions |
-| **Smart Updates** | Efficient parameter changes without AI re-generation |
-| **Custom Fonts** | Built-in Geist font support for text in models |
+| Feature                    | Description                                          |
+| -------------------------- | ---------------------------------------------------- |
+| **Natural Language Input** | Describe your 3D model in plain English              |
+| **Image References**       | Upload images to guide model generation              |
+| **Real-time Preview**      | See your model update instantly with Three.js        |
+| **Parameter Extraction**   | Automatically identifies adjustable dimensions       |
+| **Smart Updates**          | Efficient parameter changes without AI re-generation |
+| **Custom Fonts**           | Built-in Geist font support for text in models       |
 
 ## 📸 Demo
 
@@ -173,13 +170,9 @@ npx supabase functions serve --no-verify-jwt
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+If you have a suggestion that would make this better, please fork the repo and create a pull request. You can also [open an issue](https://github.com/Adam-CAD/CADAM/issues).
 
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+See the [CONTRIBUTING.md](CONTRIBUTING.md) for instructions and [code of conduct](CODE_OF_CONDUCT.md).
 
 ## 🙏 Credits
 

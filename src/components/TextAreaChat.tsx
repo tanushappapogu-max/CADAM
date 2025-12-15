@@ -515,7 +515,6 @@ function TextAreaChat({
           method: 'POST',
           body: {
             existingText: input.trim() || null,
-            type: 'parametric',
           },
         },
       );

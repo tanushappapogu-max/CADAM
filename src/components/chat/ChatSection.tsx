@@ -10,6 +10,7 @@ import { AssistantLoading } from '@/components/chat/AssistantLoading';
 import { ChatTitle } from '@/components/chat/ChatTitle';
 import { TreeNode } from '@shared/Tree';
 import { PARAMETRIC_MODELS } from '@/lib/utils';
+import { supabase } from '@/lib/supabase';
 import {
   useIsLoading,
   useSendContentMutation,
@@ -70,19 +71,56 @@ export function ChatSection({ messages }: ChatSectionProps) {
     return messages[messages.length - 1];
   }, [messages, conversation.current_message_leaf_id]);
 
-  // Get suggestions from the last assistant message
-  const suggestions = useMemo(() => {
-    if (isLoading) return [];
-    // Find the last assistant message (not just lastMessage which could be user)
-    const lastAssistantMsg = [...messages]
-      .reverse()
-      .find((m) => m.role === 'assistant');
-    return (
-      lastAssistantMsg?.content?.artifact?.suggestions ||
-      lastAssistantMsg?.content?.suggestions ||
-      []
-    );
-  }, [messages, isLoading]);
+  // Generate suggestions based on the last user message
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const lastUserMessage = useMemo(() => {
+    return [...messages].reverse().find((m) => m.role === 'user');
+  }, [messages]);
+
+  // Generate suggestions when loading completes and we have a new assistant response
+  useEffect(() => {
+    // Don't generate while loading
+    if (isLoading) {
+      setSuggestions([]);
+      return;
+    }
+
+    // Need a user message to base suggestions on
+    const userPrompt = lastUserMessage?.content?.text;
+    if (!userPrompt) {
+      setSuggestions([]);
+      return;
+    }
+
+    // Check if the last message is an assistant message with an artifact (model was generated)
+    const lastMsg = messages[messages.length - 1];
+    if (lastMsg?.role !== 'assistant' || !lastMsg?.content?.artifact) {
+      setSuggestions([]);
+      return;
+    }
+
+    // Generate suggestions
+    const generateSuggestions = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke(
+          'suggestion-generator',
+          {
+            body: { userPrompt },
+          },
+        );
+
+        if (error) throw error;
+        if (data?.suggestions) {
+          setSuggestions(data.suggestions);
+        }
+      } catch (err) {
+        console.error('Failed to generate suggestions:', err);
+        setSuggestions([]);
+      }
+    };
+
+    generateSuggestions();
+  }, [isLoading, lastUserMessage, messages]);
 
   const handleSuggestionSelect = useCallback(
     (suggestion: string) => {

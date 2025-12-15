@@ -170,94 +170,6 @@ interface OpenRouterRequest {
   };
 }
 
-// Generate short follow-up suggestions for parametric edits (separate cheap model call)
-async function generateParametricSuggestions(
-  userPrompt: string,
-): Promise<string[]> {
-  try {
-    const suggestionPrompt = `You are helping a user iterate on a 3D CAD model they just created. They asked for: "${userPrompt}"
-
-Generate exactly 2 short, specific follow-up suggestions that would meaningfully improve or customize this model.
-
-Good suggestions are:
-- Specific modifications relevant to THIS object (not generic)
-- Action-oriented (what to change, not questions)
-- 2-4 words max
-- Practical for 3D printing or CAD
-
-Examples by object type:
-- Mug → "Add thumb grip", "Wider base"
-- Phone stand → "Steeper angle", "Add cable slot"  
-- Box → "Rounded corners", "Add hinged lid"
-- Gear → "Fewer teeth", "Thicker hub"
-- Bracket → "Add reinforcement", "Countersunk holes"
-
-Return exactly 2 suggestions in this format:
-<suggestion>First suggestion</suggestion>
-<suggestion>Second suggestion</suggestion>`;
-
-    const response = await fetch(OPENROUTER_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${OPENROUTER_API_KEY}`,
-        'HTTP-Referer': 'https://adam-cad.com',
-        'X-Title': 'Adam CAD',
-      },
-      body: JSON.stringify({
-        model: 'anthropic/claude-3.5-haiku',
-        max_tokens: 100,
-        messages: [
-          {
-            role: 'user',
-            content: suggestionPrompt,
-          },
-        ],
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`OpenRouter API error: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    if (data.choices && data.choices[0]?.message?.content) {
-      const responseText = data.choices[0].message.content;
-      // Extract suggestions from <suggestion> tags
-      const suggestionRegex = /<suggestion>(.*?)<\/suggestion>/gi;
-      const matches = responseText.matchAll(suggestionRegex);
-      const normalized = Array.from(
-        new Set(
-          Array.from(matches)
-            .map(([, text]) => {
-              if (!text) return null;
-              const cleaned = text
-                .trim()
-                .replace(/[""'']/g, '')
-                .replace(/^["']|["']$/g, '')
-                .trim();
-              // Enforce max 5 words
-              const words = cleaned.split(/\s+/);
-              if (words.length > 5) return null;
-              // Title case
-              return words
-                .map(
-                  (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase(),
-                )
-                .join(' ');
-            })
-            .filter((s): s is string => s !== null && s.length > 0),
-        ),
-      ).slice(0, 2);
-
-      return normalized;
-    }
-  } catch (error) {
-    console.error('Error generating parametric suggestions:', error);
-  }
-  return [];
-}
-
 async function generateTitleFromMessages(
   messagesToSend: OpenAIMessage[],
 ): Promise<string> {
@@ -856,34 +768,6 @@ Deno.serve(async (req) => {
                   parameters: parseParameters(extractedCode),
                 },
               };
-            }
-          }
-
-          // Generate suggestions if we have an artifact
-          if (content.artifact) {
-            try {
-              // Get the user's original request for context
-              const lastUserMsg = [...messagesToSend]
-                .reverse()
-                .find((m) => m.role === 'user');
-              const userPrompt =
-                typeof lastUserMsg?.content === 'string'
-                  ? lastUserMsg.content
-                  : 'a parametric 3D model';
-
-              const suggestions =
-                await generateParametricSuggestions(userPrompt);
-              if (suggestions.length > 0) {
-                content = {
-                  ...content,
-                  artifact: {
-                    ...content.artifact,
-                    suggestions,
-                  },
-                };
-              }
-            } catch (e) {
-              console.error('Suggestions generation failed:', e);
             }
           }
 

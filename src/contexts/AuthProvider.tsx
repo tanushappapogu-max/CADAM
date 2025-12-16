@@ -3,6 +3,12 @@ import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { AuthContext } from './AuthContext';
 
+// Get the redirect URL for OAuth callbacks (handles /cadam base path)
+const getRedirectUrl = () => {
+  const base = import.meta.env.BASE_URL || '/';
+  return `${window.location.origin}${base.endsWith('/') ? base.slice(0, -1) : base}`;
+};
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(
     JSON.parse(localStorage.getItem('session') ?? 'null'),
@@ -33,6 +39,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       supabase.auth.signOut().then(() => {
         supabase.auth.signInWithOAuth({
           provider: 'google',
+          options: { redirectTo: getRedirectUrl() },
         });
       });
     }
@@ -90,10 +97,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signInWithEmail = async (email: string) => {
+    const redirectTo = getRedirectUrl();
     const { error } = await supabase.auth.updateUser({ email });
     if (error) {
       if (error.code === 'email_exists') {
-        await supabase.auth.signInWithOtp({ email });
+        await supabase.auth.signInWithOtp({
+          email,
+          options: { emailRedirectTo: redirectTo },
+        });
       } else {
         throw error;
       }
@@ -106,16 +117,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       data: { user: currentUser },
     } = await supabase.auth.getUser();
 
+    const redirectTo = getRedirectUrl();
+
     if (currentUser?.is_anonymous) {
       // Track that we're attempting to link, so we can handle errors on redirect
       sessionStorage.setItem('pending_link_identity', 'google');
       // For anonymous users, link the identity to upgrade their account
       // If the identity already exists, the redirect will return an error
       // which is handled by the useEffect above
-      await supabase.auth.linkIdentity({ provider: 'google' });
+      await supabase.auth.linkIdentity({
+        provider: 'google',
+        options: { redirectTo },
+      });
     } else {
       // For non-anonymous or no user, do a regular OAuth sign in
-      await supabase.auth.signInWithOAuth({ provider: 'google' });
+      await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo },
+      });
     }
   };
 

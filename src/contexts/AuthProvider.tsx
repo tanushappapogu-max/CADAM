@@ -18,9 +18,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Handle OAuth errors from redirect (e.g., identity_already_exists)
   useEffect(() => {
-    const pendingLinkProvider = sessionStorage.getItem('pending_link_identity');
-    if (!pendingLinkProvider) return;
-
     // Check both query string and hash for error params (Supabase uses query string for errors)
     const queryParams = new URLSearchParams(window.location.search);
     const hashParams = new URLSearchParams(window.location.hash.substring(1));
@@ -28,13 +25,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const error_code =
       queryParams.get('error_code') || hashParams.get('error_code');
 
-    // Clear the pending flag regardless of outcome
+    // Clear the pending flag if it exists
     sessionStorage.removeItem('pending_link_identity');
 
     if (error === 'server_error' && error_code === 'identity_already_exists') {
+      // Prevent infinite loop - check if we've already tried recovering
+      const recoveryAttempted = sessionStorage.getItem(
+        'identity_recovery_attempted',
+      );
+      if (recoveryAttempted) {
+        sessionStorage.removeItem('identity_recovery_attempted');
+        // Clear error params from URL and let user try again manually
+        window.history.replaceState(null, '', window.location.pathname);
+        return;
+      }
+
+      // Mark that we're attempting recovery
+      sessionStorage.setItem('identity_recovery_attempted', 'true');
       // Clear error params from URL
       window.history.replaceState(null, '', window.location.pathname);
-      // The identity exists on another account - sign out first to avoid infinite redirect loop,
+      // The identity exists on another account - sign out first,
       // then the user can sign in fresh with Google
       supabase.auth.signOut().then(() => {
         supabase.auth.signInWithOAuth({

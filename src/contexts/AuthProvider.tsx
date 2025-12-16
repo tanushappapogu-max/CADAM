@@ -15,20 +15,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const pendingLinkProvider = sessionStorage.getItem('pending_link_identity');
     if (!pendingLinkProvider) return;
 
+    // Check both query string and hash for error params (Supabase uses query string for errors)
+    const queryParams = new URLSearchParams(window.location.search);
     const hashParams = new URLSearchParams(window.location.hash.substring(1));
-    const error = hashParams.get('error');
-    const error_code = hashParams.get('error_code');
+    const error = queryParams.get('error') || hashParams.get('error');
+    const error_code =
+      queryParams.get('error_code') || hashParams.get('error_code');
 
     // Clear the pending flag regardless of outcome
     sessionStorage.removeItem('pending_link_identity');
 
     if (error === 'server_error' && error_code === 'identity_already_exists') {
-      // Clear the hash from URL
-      window.history.replaceState(
-        null,
-        '',
-        window.location.pathname + window.location.search,
-      );
+      // Clear error params from URL
+      window.history.replaceState(null, '', window.location.pathname);
       // The identity exists on another account - sign out first to avoid infinite redirect loop,
       // then the user can sign in fresh with Google
       supabase.auth.signOut().then(() => {

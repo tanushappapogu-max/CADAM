@@ -57,6 +57,9 @@ export function PromptView() {
     }
   }, []); // Empty dependency array means it only calculates once per page load
 
+  // Check if auth modal would be visible (user is anonymous or not logged in)
+  const isAuthModalVisible = !user || user.is_anonymous;
+
   const { mutate: handleGenerate } = useMutation({
     mutationFn: async (content: Content) => {
       // Create conversation immediately with 'New Conversation'
@@ -143,7 +146,12 @@ export function PromptView() {
             </h1>
           </div>
           <div className="flex flex-col items-center">
-            <div className="w-full max-w-3xl space-y-4 pb-12">
+            <div
+              className={cn(
+                'w-full max-w-3xl space-y-4 pb-12 transition-all duration-300',
+                isAuthModalVisible && 'xl:max-w-2xl',
+              )}
+            >
               <SelectedItemsContext.Provider
                 value={{ images, setImages, meshUpload, setMeshUpload }}
               >

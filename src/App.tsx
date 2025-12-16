@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import { MeshFilesProvider } from '@/contexts/MeshFilesContext';
+import { FloatingAuthModal } from '@/components/auth/FloatingAuthModal';
 
 export default function App() {
   const { isLoading } = useAuth();
@@ -71,6 +72,8 @@ export default function App() {
               </MeshFilesProvider>
             </div>
           </div>
+          {/* Floating auth modal for unauthenticated users - outside overflow container */}
+          <FloatingAuthModal />
         </div>
       )}
     </div>

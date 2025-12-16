@@ -3,12 +3,6 @@ import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { AuthContext } from './AuthContext';
 
-// Get the redirect URL for OAuth callbacks (handles /cadam base path)
-const getRedirectUrl = () => {
-  const base = import.meta.env.BASE_URL || '/';
-  return `${window.location.origin}${base.endsWith('/') ? base.slice(0, -1) : base}`;
-};
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(
     JSON.parse(localStorage.getItem('session') ?? 'null'),
@@ -18,39 +12,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Handle OAuth errors from redirect (e.g., identity_already_exists)
   useEffect(() => {
-    // Check both query string and hash for error params (Supabase uses query string for errors)
-    const queryParams = new URLSearchParams(window.location.search);
-    const hashParams = new URLSearchParams(window.location.hash.substring(1));
-    const error = queryParams.get('error') || hashParams.get('error');
-    const error_code =
-      queryParams.get('error_code') || hashParams.get('error_code');
+    const pendingLinkProvider = sessionStorage.getItem('pending_link_identity');
+    if (!pendingLinkProvider) return;
 
-    // Clear the pending flag if it exists
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const error = hashParams.get('error');
+    const error_code = hashParams.get('error_code');
+
+    // Clear the pending flag regardless of outcome
     sessionStorage.removeItem('pending_link_identity');
 
     if (error === 'server_error' && error_code === 'identity_already_exists') {
-      // Prevent infinite loop - check if we've already tried recovering
-      const recoveryAttempted = sessionStorage.getItem(
-        'identity_recovery_attempted',
+      // Clear the hash from URL
+      window.history.replaceState(
+        null,
+        '',
+        window.location.pathname + window.location.search,
       );
-      if (recoveryAttempted) {
-        sessionStorage.removeItem('identity_recovery_attempted');
-        // Clear error params from URL and let user try again manually
-        window.history.replaceState(null, '', window.location.pathname);
-        return;
-      }
-
-      // Mark that we're attempting recovery
-      sessionStorage.setItem('identity_recovery_attempted', 'true');
-      // Clear error params from URL
-      window.history.replaceState(null, '', window.location.pathname);
-      // The identity exists on another account - sign out first,
-      // then the user can sign in fresh with Google
-      supabase.auth.signOut().then(() => {
-        supabase.auth.signInWithOAuth({
-          provider: 'google',
-          options: { redirectTo: getRedirectUrl() },
-        });
+      // The identity exists on another account, so sign in instead of linking
+      supabase.auth.signInWithOAuth({
+        provider: 'google',
       });
     }
   }, []);
@@ -94,27 +75,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    setSession(null);
+    setUser(null);
     localStorage.removeItem('session');
-    // Create a new anonymous session to match app's anonymous-first auth pattern
-    const {
-      data: { session: newSession },
-    } = await supabase.auth.signInAnonymously();
-    setSession(newSession);
-    setUser(newSession?.user ?? null);
-    if (newSession) {
-      localStorage.setItem('session', JSON.stringify(newSession));
-    }
   };
 
   const signInWithEmail = async (email: string) => {
-    const redirectTo = getRedirectUrl();
     const { error } = await supabase.auth.updateUser({ email });
     if (error) {
       if (error.code === 'email_exists') {
-        await supabase.auth.signInWithOtp({
-          email,
-          options: { emailRedirectTo: redirectTo },
-        });
+        await supabase.auth.signInWithOtp({ email });
       } else {
         throw error;
       }
@@ -122,30 +92,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signInWithGoogle = async () => {
-    // Check if user is authenticated (linkIdentity requires an authenticated user)
-    const {
-      data: { user: currentUser },
-    } = await supabase.auth.getUser();
-
-    const redirectTo = getRedirectUrl();
-
-    if (currentUser?.is_anonymous) {
-      // Track that we're attempting to link, so we can handle errors on redirect
-      sessionStorage.setItem('pending_link_identity', 'google');
-      // For anonymous users, link the identity to upgrade their account
-      // If the identity already exists, the redirect will return an error
-      // which is handled by the useEffect above
-      await supabase.auth.linkIdentity({
-        provider: 'google',
-        options: { redirectTo },
-      });
-    } else {
-      // For non-anonymous or no user, do a regular OAuth sign in
-      await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: { redirectTo },
-      });
-    }
+    // Track that we're attempting to link, so we can handle errors on redirect
+    sessionStorage.setItem('pending_link_identity', 'google');
+    // Always try to link identity first (for anonymous users)
+    // If the identity already exists, the redirect will return an error
+    // which is handled by the useEffect above
+    await supabase.auth.linkIdentity({ provider: 'google' });
   };
 
   const verifyOtp = async (email: string, token: string) => {

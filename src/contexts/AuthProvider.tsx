@@ -29,9 +29,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         '',
         window.location.pathname + window.location.search,
       );
-      // The identity exists on another account, so sign in instead of linking
-      supabase.auth.signInWithOAuth({
-        provider: 'google',
+      // The identity exists on another account - sign out first to avoid infinite redirect loop,
+      // then the user can sign in fresh with Google
+      supabase.auth.signOut().then(() => {
+        supabase.auth.signInWithOAuth({
+          provider: 'google',
+        });
       });
     }
   }, []);
@@ -75,9 +78,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     await supabase.auth.signOut();
-    setSession(null);
-    setUser(null);
     localStorage.removeItem('session');
+    // Create a new anonymous session to match app's anonymous-first auth pattern
+    const {
+      data: { session: newSession },
+    } = await supabase.auth.signInAnonymously();
+    setSession(newSession);
+    setUser(newSession?.user ?? null);
+    if (newSession) {
+      localStorage.setItem('session', JSON.stringify(newSession));
+    }
   };
 
   const signInWithEmail = async (email: string) => {
@@ -92,12 +102,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signInWithGoogle = async () => {
-    // Track that we're attempting to link, so we can handle errors on redirect
-    sessionStorage.setItem('pending_link_identity', 'google');
-    // Always try to link identity first (for anonymous users)
-    // If the identity already exists, the redirect will return an error
-    // which is handled by the useEffect above
-    await supabase.auth.linkIdentity({ provider: 'google' });
+    // Check if user is authenticated (linkIdentity requires an authenticated user)
+    const {
+      data: { user: currentUser },
+    } = await supabase.auth.getUser();
+
+    if (currentUser?.is_anonymous) {
+      // Track that we're attempting to link, so we can handle errors on redirect
+      sessionStorage.setItem('pending_link_identity', 'google');
+      // For anonymous users, link the identity to upgrade their account
+      // If the identity already exists, the redirect will return an error
+      // which is handled by the useEffect above
+      await supabase.auth.linkIdentity({ provider: 'google' });
+    } else {
+      // For non-anonymous or no user, do a regular OAuth sign in
+      await supabase.auth.signInWithOAuth({ provider: 'google' });
+    }
   };
 
   const verifyOtp = async (email: string, token: string) => {

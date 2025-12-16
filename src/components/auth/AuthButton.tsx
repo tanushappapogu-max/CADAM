@@ -1,4 +1,3 @@
-import { User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Popover,
@@ -13,7 +12,6 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { ConditionalWrapper } from '@/components/ConditionalWrapper';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { LoginPopoverContent } from './LoginPopoverContent';
 import { ProfilePopoverContent } from './ProfilePopoverContent';
 
 interface AuthButtonProps {
@@ -25,6 +23,9 @@ export function AuthButton({ isSidebarOpen }: AuthButtonProps) {
 
   // Check if user is authenticated (not anonymous)
   const isAuthenticated = user && !user.is_anonymous;
+
+  // Only show for authenticated users - unauthenticated users see the floating modal
+  if (!isAuthenticated) return null;
 
   // Get user display info
   const userEmail = user?.email;
@@ -47,12 +48,8 @@ export function AuthButton({ isSidebarOpen }: AuthButtonProps) {
           <Tooltip>
             <TooltipTrigger asChild>{children}</TooltipTrigger>
             <TooltipContent side="right" className="flex flex-col">
-              <span className="font-semibold">
-                {isAuthenticated ? 'Profile' : 'Sign In'}
-              </span>
-              <span className="text-xs text-muted-foreground">
-                {isAuthenticated ? userEmail : 'Sign in to your account'}
-              </span>
+              <span className="font-semibold">Profile</span>
+              <span className="text-xs text-muted-foreground">{userEmail}</span>
             </TooltipContent>
           </Tooltip>
         )}
@@ -62,44 +59,29 @@ export function AuthButton({ isSidebarOpen }: AuthButtonProps) {
             variant={isSidebarOpen ? 'adam_dark' : 'adam_dark_collapsed_avatar'}
             className={`${isSidebarOpen ? 'w-full justify-start' : 'ml-[1px] h-[46px] w-[46px] p-0'}`}
           >
-            {isAuthenticated ? (
-              <>
-                <Avatar
-                  className={`${isSidebarOpen ? 'mr-2' : ''} h-[22px] w-[22px] min-w-[22px]`}
-                >
-                  <AvatarImage src={userAvatar} alt={userName || userEmail} />
-                  <AvatarFallback className="text-[10px] text-white">
-                    {userInitials}
-                  </AvatarFallback>
-                </Avatar>
-                {isSidebarOpen && (
-                  <span className="truncate">
-                    {userName || userEmail || 'Profile'}
-                  </span>
-                )}
-              </>
-            ) : (
-              <>
-                <User
-                  className={`${isSidebarOpen ? 'mr-2' : ''} h-[22px] w-[22px] min-w-[22px]`}
-                />
-                {isSidebarOpen && 'Sign In'}
-              </>
+            <Avatar
+              className={`${isSidebarOpen ? 'mr-2' : ''} h-[22px] w-[22px] min-w-[22px]`}
+            >
+              <AvatarImage src={userAvatar} alt={userName || userEmail} />
+              <AvatarFallback className="text-[10px] text-white">
+                {userInitials}
+              </AvatarFallback>
+            </Avatar>
+            {isSidebarOpen && (
+              <span className="truncate">
+                {userName || userEmail || 'Profile'}
+              </span>
             )}
           </Button>
         </PopoverTrigger>
       </ConditionalWrapper>
       <PopoverContent side="right" align="end" className="w-80">
-        {isAuthenticated ? (
-          <ProfilePopoverContent
-            userName={userName}
-            userEmail={userEmail}
-            userAvatar={userAvatar}
-            userInitials={userInitials}
-          />
-        ) : (
-          <LoginPopoverContent />
-        )}
+        <ProfilePopoverContent
+          userName={userName}
+          userEmail={userEmail}
+          userAvatar={userAvatar}
+          userInitials={userInitials}
+        />
       </PopoverContent>
     </Popover>
   );

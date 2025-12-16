@@ -9,6 +9,7 @@ import {
   InputOTPSeparator,
 } from '@/components/ui/input-otp';
 import { useAuth } from '@/contexts/AuthContext';
+import { toast } from '@/hooks/use-toast';
 
 type ViewState = 'idle' | 'emailSent';
 
@@ -17,24 +18,60 @@ export function LoginPopoverContent() {
   const [view, setView] = useState<ViewState>('idle');
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email) {
+    if (!email) return;
+
+    setIsLoading(true);
+    try {
       await signInWithEmail(email);
       setView('emailSent');
+    } catch (error) {
+      toast({
+        title: 'Failed to send email',
+        description:
+          error instanceof Error ? error.message : 'Please try again',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleOtpSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email && otp) {
+    if (!email || !otp) return;
+
+    setIsLoading(true);
+    try {
       await verifyOtp(email, otp);
+    } catch (error) {
+      toast({
+        title: 'Verification failed',
+        description:
+          error instanceof Error
+            ? error.message
+            : 'Invalid code. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleGoogleSignIn = async () => {
-    await signInWithGoogle();
+    try {
+      await signInWithGoogle();
+    } catch (error) {
+      toast({
+        title: 'Google sign in failed',
+        description:
+          error instanceof Error ? error.message : 'Please try again',
+        variant: 'destructive',
+      });
+    }
   };
 
   if (view === 'emailSent') {
@@ -113,9 +150,9 @@ export function LoginPopoverContent() {
             type="submit"
             variant="outline"
             className="w-full"
-            disabled={otp.length !== 6}
+            disabled={otp.length !== 6 || isLoading}
           >
-            Verify Code
+            {isLoading ? 'Verifying...' : 'Verify Code'}
           </Button>
         </form>
       </div>
@@ -138,9 +175,15 @@ export function LoginPopoverContent() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           className="h-11 rounded-lg bg-adam-background-1"
+          disabled={isLoading}
         />
-        <Button type="submit" variant="outline" className="w-full">
-          Continue with Email
+        <Button
+          type="submit"
+          variant="outline"
+          className="w-full"
+          disabled={isLoading}
+        >
+          {isLoading ? 'Sending...' : 'Continue with Email'}
         </Button>
       </form>
 

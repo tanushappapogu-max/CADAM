@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
-import { PanelLeft } from 'lucide-react';
+import { PanelLeft, Loader2 } from 'lucide-react';
 
 import { Sidebar } from '@/components/Sidebar';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Loader2 } from 'lucide-react';
 import { MeshFilesProvider } from '@/contexts/MeshFilesContext';
 import { FloatingAuthModal } from '@/components/auth/FloatingAuthModal';
+import { PostHogProvider } from '@/contexts/PostHogProvider';
 
 export default function App() {
   const { isLoading } = useAuth();
@@ -42,40 +42,42 @@ export default function App() {
   }
 
   return (
-    <div className="h-dvh overflow-hidden">
-      {isMobile ? (
-        <div className="flex h-dvh w-full items-center justify-center bg-adam-bg-dark text-adam-text-primary">
-          Please use a desktop browser to access this app.
-        </div>
-      ) : (
-        <div className="flex h-dvh transition-all ease-in-out">
-          <Sidebar isSidebarOpen={isSidebarOpen} />
-          <div className="relative flex-1 overflow-auto bg-adam-bg-dark">
-            {/* Toggle Sidebar Button - Positioned on main content area */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className={`bg-adam-neutral-3000 fixed z-10 h-7 w-7 rounded-md text-gray-400 transition-all duration-300 [@media(hover:hover)]:hover:bg-adam-neutral-950 [@media(hover:hover)]:hover:text-adam-neutral-10 ${
-                isSidebarOpen ? 'left-[272px]' : 'left-20'
-              } ${
-                location.pathname === '/' && isSidebarOpen
-                  ? 'top-[2.25rem]'
-                  : 'top-3.5'
-              }`}
-              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            >
-              <PanelLeft className="h-4 w-4" />
-            </Button>
-            <div className="h-full bg-adam-bg-dark">
-              <MeshFilesProvider>
-                <Outlet context={{ isSidebarOpen }} />
-              </MeshFilesProvider>
-            </div>
+    <PostHogProvider>
+      <div className="h-dvh overflow-hidden">
+        {isMobile ? (
+          <div className="flex h-dvh w-full items-center justify-center bg-adam-bg-dark text-adam-text-primary">
+            Please use a desktop browser to access this app.
           </div>
-          {/* Floating auth modal for unauthenticated users - outside overflow container */}
-          <FloatingAuthModal />
-        </div>
-      )}
-    </div>
+        ) : (
+          <div className="flex h-dvh transition-all ease-in-out">
+            <Sidebar isSidebarOpen={isSidebarOpen} />
+            <div className="relative flex-1 overflow-auto bg-adam-bg-dark">
+              {/* Toggle Sidebar Button - Positioned on main content area */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className={`bg-adam-neutral-3000 fixed z-10 h-7 w-7 rounded-md text-gray-400 transition-all duration-300 [@media(hover:hover)]:hover:bg-adam-neutral-950 [@media(hover:hover)]:hover:text-adam-neutral-10 ${
+                  isSidebarOpen ? 'left-[272px]' : 'left-20'
+                } ${
+                  location.pathname === '/' && isSidebarOpen
+                    ? 'top-[2.25rem]'
+                    : 'top-3.5'
+                }`}
+                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              >
+                <PanelLeft className="h-4 w-4" />
+              </Button>
+              <div className="h-full bg-adam-bg-dark">
+                <MeshFilesProvider>
+                  <Outlet context={{ isSidebarOpen }} />
+                </MeshFilesProvider>
+              </div>
+            </div>
+            {/* Floating auth modal for unauthenticated users - outside overflow container */}
+            <FloatingAuthModal />
+          </div>
+        )}
+      </div>
+    </PostHogProvider>
   );
 }

@@ -4,6 +4,8 @@ const POSTHOG_KEY = import.meta.env.VITE_POSTHOG_KEY;
 const POSTHOG_HOST =
   import.meta.env.VITE_POSTHOG_HOST || 'https://us.i.posthog.com';
 
+let isInitialized = false;
+
 export const initPostHog = () => {
   if (!POSTHOG_KEY) {
     console.warn('PostHog key not configured. Analytics disabled.');
@@ -17,6 +19,25 @@ export const initPostHog = () => {
     capture_pageleave: true,
     autocapture: true,
   });
+
+  isInitialized = true;
 };
 
-export { posthog };
+// Safe wrapper that only calls PostHog methods when initialized
+export const analytics = {
+  identify: (userId: string, properties?: Record<string, unknown>) => {
+    if (isInitialized) {
+      posthog.identify(userId, properties);
+    }
+  },
+  reset: () => {
+    if (isInitialized) {
+      posthog.reset();
+    }
+  },
+  capture: (event: string, properties?: Record<string, unknown>) => {
+    if (isInitialized) {
+      posthog.capture(event, properties);
+    }
+  },
+};

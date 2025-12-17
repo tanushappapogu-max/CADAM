@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { posthog, initPostHog } from '@/lib/posthog';
+import { analytics, initPostHog } from '@/lib/posthog';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface PostHogProviderProps {
@@ -19,11 +19,11 @@ export function PostHogProvider({ children }: PostHogProviderProps) {
   // Identify user when authenticated
   useEffect(() => {
     if (!user) {
-      posthog.reset();
+      analytics.reset();
       return;
     }
 
-    posthog.identify(user.id, {
+    analytics.identify(user.id, {
       email: user.email,
       created_at: user.created_at,
       is_anonymous: user.is_anonymous,
@@ -32,7 +32,7 @@ export function PostHogProvider({ children }: PostHogProviderProps) {
 
   // Track page views on route change
   useEffect(() => {
-    posthog.capture('$pageview', {
+    analytics.capture('$pageview', {
       $current_url: window.location.href,
     });
   }, [location.pathname]);

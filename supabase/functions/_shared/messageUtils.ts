@@ -74,8 +74,17 @@ export async function getBase64Images(
         const arrayBuffer = await data.arrayBuffer();
         const uint8Array = new Uint8Array(arrayBuffer);
 
-        // Convert to base64
-        const base64 = btoa(String.fromCharCode(...uint8Array));
+        // Convert to base64 using chunked approach (avoids stack overflow on large images)
+        let binary = '';
+        const chunkSize = 0x8000; // 32KB chunks
+        for (let i = 0; i < uint8Array.length; i += chunkSize) {
+          const chunk = uint8Array.subarray(
+            i,
+            Math.min(i + chunkSize, uint8Array.length),
+          );
+          binary += String.fromCharCode.apply(null, Array.from(chunk));
+        }
+        const base64 = btoa(binary);
 
         // Determine media type from blob type or default to jpeg
         const mediaType = data.type || 'image/jpeg';

@@ -578,12 +578,6 @@ Deno.serve(async (req) => {
       requestBody.max_tokens = 20000;
     }
 
-    // Log messages for debugging (especially image content)
-    console.log(
-      'Sending messages to OpenRouter:',
-      JSON.stringify(messagesToSend, null, 2),
-    );
-
     const response = await fetch(OPENROUTER_API_URL, {
       method: 'POST',
       headers: {
@@ -804,50 +798,30 @@ Deno.serve(async (req) => {
               return;
             }
 
-            // Prepare a focused request to produce code only
-            const userRequest =
-              toolInput.text ||
-              newMessage.content.text ||
-              'Create a printable model';
-
-            // For simple requests, use minimal context to avoid confusion
-            const isSimpleRequest =
-              !toolInput.baseCode &&
-              !toolInput.error &&
-              messagesToSend.length <= 2;
-
+            // Build code generation messages
             const baseContext: OpenAIMessage[] = toolInput.baseCode
+              ? [{ role: 'assistant' as const, content: toolInput.baseCode }]
+              : [];
+
+            // If baseContext adds an assistant message, re-state user request so conversation ends with user
+            const userText = newMessage?.content.text || '';
+            const needsUserMessage = baseContext.length > 0 || toolInput.error;
+            const finalUserMessage: OpenAIMessage[] = needsUserMessage
               ? [
                   {
-                    role: 'assistant',
-                    content: toolInput.baseCode,
+                    role: 'user' as const,
+                    content: toolInput.error
+                      ? `${userText}\n\nFix this OpenSCAD error: ${toolInput.error}`
+                      : userText,
                   },
                 ]
               : [];
 
-            const codeMessages: OpenAIMessage[] = isSimpleRequest
-              ? [
-                  {
-                    role: 'user' as const,
-                    content:
-                      userRequest +
-                      (toolInput.error
-                        ? `\n\nFix this OpenSCAD error: ${toolInput.error}`
-                        : ''),
-                  },
-                ]
-              : [
-                  ...messagesToSend,
-                  ...baseContext,
-                  {
-                    role: 'user' as const,
-                    content:
-                      userRequest +
-                      (toolInput.error
-                        ? `\n\nFix this OpenSCAD error: ${toolInput.error}`
-                        : ''),
-                  },
-                ];
+            const codeMessages: OpenAIMessage[] = [
+              ...messagesToSend,
+              ...baseContext,
+              ...finalUserMessage,
+            ];
 
             // Code generation request logic
             const codeRequestBody: OpenRouterRequest = {

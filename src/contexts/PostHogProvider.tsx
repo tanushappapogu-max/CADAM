@@ -9,15 +9,17 @@ interface PostHogProviderProps {
 
 export function PostHogProvider({ children }: PostHogProviderProps) {
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
 
   // Initialize PostHog once on mount
   useEffect(() => {
     initPostHog();
   }, []);
 
-  // Identify user when authenticated
+  // Identify user (including anonymous) when auth settles
   useEffect(() => {
+    if (isLoading) return;
+
     if (!user) {
       analytics.reset();
       return;
@@ -28,7 +30,7 @@ export function PostHogProvider({ children }: PostHogProviderProps) {
       created_at: user.created_at,
       is_anonymous: user.is_anonymous,
     });
-  }, [user]);
+  }, [user, isLoading]);
 
   // Track page views on route change
   useEffect(() => {

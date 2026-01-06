@@ -7,6 +7,7 @@ import WorkspaceFile from '../lib/WorkspaceFile.ts';
 export const enum WorkerMessageType {
   PREVIEW = 'preview',
   EXPORT = 'export',
+  EXPORT_2D = 'export2d',
   FS_READ = 'fs.read',
   FS_WRITE = 'fs.write',
   FS_UNLINK = 'fs.unlink',
@@ -15,6 +16,7 @@ export const enum WorkerMessageType {
 type WorkerMessageDataMap = {
   [WorkerMessageType.PREVIEW]: OpenSCADWorkerMessageData;
   [WorkerMessageType.EXPORT]: OpenSCADWorkerMessageData;
+  [WorkerMessageType.EXPORT_2D]: Export2DMessageData;
   [WorkerMessageType.FS_READ]: FileSystemWorkerMessageData;
   [WorkerMessageType.FS_WRITE]: FileSystemWorkerMessageData;
   [WorkerMessageType.FS_UNLINK]: FileSystemWorkerMessageData;
@@ -40,6 +42,13 @@ export type WorkerResponseMessage = {
 export type OpenSCADWorkerMessageData = {
   code: string;
   fileType: string;
+  params: Parameter[];
+};
+
+export type Export2DMessageData = {
+  code: string;
+  format: 'dxf' | 'svg';
+  projection: 'flat' | 'cut';
   params: Parameter[];
 };
 

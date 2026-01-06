@@ -7,6 +7,7 @@ import {
   FileSystemWorkerMessageData,
   OpenSCADWorkerMessageData,
   OpenSCADWorkerResponseData,
+  Export2DMessageData,
 } from './types';
 import OpenSCADError from '@/lib/OpenSCADError';
 import { libraries } from '@/lib/libraries.ts';
@@ -203,6 +204,90 @@ class OpenSCADWrapper {
     }
 
     return render;
+  }
+
+  /**
+   * Export 2D file (DXF/SVG) using projection() to flatten 3D models
+   */
+  async export2D(
+    data: Export2DMessageData,
+  ): Promise<OpenSCADWorkerResponseData> {
+    const params = data.params
+      .map(({ name, type, value }) => {
+        if (type === 'string' && typeof value === 'string') {
+          value = this.escapeShell(value);
+        } else if (type === 'number[]' && Array.isArray(value)) {
+          value = `[${value.join(',')}]`;
+        } else if (type === 'string[]' && Array.isArray(value)) {
+          value = `[${value.map((v) => (typeof v === 'string' ? this.escapeShell(v) : v)).join(',')}]`;
+        } else if (type === 'boolean[]' && Array.isArray(value)) {
+          value = `[${value.join(',')}]`;
+        }
+        return `-D${name}=${value}`;
+      })
+      .filter(Boolean);
+
+    // Wrap code with projection - extract top-level statements first
+    const wrappedCode = this.wrapWithProjection(data.code, data.projection);
+
+    const exportParams = [
+      `--export-format=${data.format}`,
+      '--enable=manifold',
+      '--enable=fast-csg',
+      '--enable=lazy-union',
+    ];
+
+    try {
+      return await this.executeOpenscad(
+        wrappedCode,
+        data.format,
+        params.concat(exportParams),
+      );
+    } catch {
+      // If projection fails, try direct export (code might already be 2D)
+      return await this.executeOpenscad(
+        data.code,
+        data.format,
+        params.concat(exportParams),
+      );
+    }
+  }
+
+  /**
+   * Wrap code with projection(), keeping use/include/module/function at top level
+   */
+  private wrapWithProjection(code: string, mode: 'flat' | 'cut'): string {
+    const lines = code.split('\n');
+    const topLevel: string[] = [];
+    const body: string[] = [];
+    let inBlock = false;
+    let depth = 0;
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+
+      if (inBlock) {
+        topLevel.push(line);
+        depth +=
+          (line.match(/{/g) || []).length - (line.match(/}/g) || []).length;
+        if (depth <= 0) inBlock = false;
+        continue;
+      }
+
+      if (/^(use|include)\s*</.test(trimmed) || /^\$f[nas]\s*=/.test(trimmed)) {
+        topLevel.push(line);
+      } else if (/^(module|function)\s+\w+/.test(trimmed)) {
+        topLevel.push(line);
+        depth =
+          (line.match(/{/g) || []).length - (line.match(/}/g) || []).length;
+        if (depth > 0) inBlock = true;
+      } else {
+        body.push(line);
+      }
+    }
+
+    const proj = mode === 'cut' ? 'projection(cut=true)' : 'projection()';
+    return [...topLevel, '', `${proj} {`, ...body, '}'].join('\n');
   }
 
   async writeFile(data: FileSystemWorkerMessageData) {

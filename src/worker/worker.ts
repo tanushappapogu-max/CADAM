@@ -4,6 +4,7 @@ import {
   FileSystemWorkerMessageData,
   OpenSCADWorkerMessageData,
   OpenSCADWorkerResponseData,
+  Export2DMessageData,
   WorkerMessage,
   WorkerResponseMessage,
 } from './types';
@@ -31,6 +32,9 @@ self.onmessage = async (
         break;
       case 'export':
         result = await openscad.exportFile(data as OpenSCADWorkerMessageData);
+        break;
+      case 'export2d':
+        result = await openscad.export2D(data as Export2DMessageData);
         break;
       case 'fs.read':
         result = await openscad.readFile(data as FileSystemWorkerMessageData);

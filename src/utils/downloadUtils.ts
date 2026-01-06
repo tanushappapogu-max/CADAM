@@ -94,3 +94,31 @@ export function downloadOpenSCADFile(
     mimeType: 'text/plain',
   });
 }
+
+/**
+ * Downloads DXF file from blob
+ */
+export function downloadDXFFile(
+  output: Blob,
+  currentMessage?: Message | null,
+): void {
+  downloadFile({
+    content: output,
+    filename: generateDownloadFilename({ currentMessage, extension: 'dxf' }),
+    mimeType: 'application/dxf',
+  });
+}
+
+/**
+ * Downloads SVG file from blob
+ */
+export function downloadSVGFile(
+  output: Blob,
+  currentMessage?: Message | null,
+): void {
+  downloadFile({
+    content: output,
+    filename: generateDownloadFilename({ currentMessage, extension: 'svg' }),
+    mimeType: 'image/svg+xml',
+  });
+}

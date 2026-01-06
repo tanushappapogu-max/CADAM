@@ -1,4 +1,4 @@
-import { RefreshCcw, Download, ChevronUp } from 'lucide-react';
+import { RefreshCcw, Download, ChevronUp, Loader2 } from 'lucide-react';
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -14,21 +14,70 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { ParameterInput } from '@/components/parameter/ParameterInput';
 import { ColorPicker } from '@/components/parameter/ColorPicker';
 import { validateParameterValue } from '@/utils/parameterUtils';
 import { useCurrentMessage } from '@/contexts/CurrentMessageContext';
-import { downloadSTLFile, downloadOpenSCADFile } from '@/utils/downloadUtils';
+import {
+  downloadSTLFile,
+  downloadOpenSCADFile,
+  downloadDXFFile,
+  downloadSVGFile,
+} from '@/utils/downloadUtils';
 import { useChangeParameters } from '@/services/messageService';
 import { useBlob } from '@/contexts/BlobContext';
+
+type Format = 'stl' | 'scad' | 'dxf-flat' | 'dxf-cut' | 'svg-flat' | 'svg-cut';
+
+/** Creates a temporary worker for 2D export, returns blob */
+async function export2D(
+  code: string,
+  format: 'dxf' | 'svg',
+  projection: 'flat' | 'cut',
+  params: Parameter[],
+): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const worker = new Worker(
+      new URL('../../worker/worker.ts', import.meta.url),
+      { type: 'module' },
+    );
+    const id = Date.now().toString();
+
+    worker.onmessage = (e) => {
+      worker.terminate();
+      if (e.data.err) {
+        reject(new Error(e.data.err.message || 'Export failed'));
+      } else if (e.data.data?.output) {
+        resolve(
+          new Blob([e.data.data.output], {
+            type: format === 'dxf' ? 'application/dxf' : 'image/svg+xml',
+          }),
+        );
+      } else {
+        reject(new Error('No output'));
+      }
+    };
+    worker.onerror = (e) => {
+      worker.terminate();
+      reject(e);
+    };
+    worker.postMessage({
+      id,
+      type: 'export2d',
+      data: { code, format, projection, params },
+    });
+  });
+}
 
 export function ParameterSection() {
   const { blob } = useBlob();
   const changeParameters = useChangeParameters();
   const { currentMessage } = useCurrentMessage();
   const parameters = currentMessage?.content.artifact?.parameters ?? [];
-  const [selectedFormat, setSelectedFormat] = useState<'stl' | 'scad'>('stl');
+  const [selectedFormat, setSelectedFormat] = useState<Format>('stl');
+  const [isExporting, setIsExporting] = useState(false);
 
   // Debounce timer for compilation
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -76,26 +125,38 @@ export function ParameterSection() {
     debouncedSubmit(updatedParameters);
   };
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
+    const code = currentMessage?.content.artifact?.code;
+    if (!code && selectedFormat !== 'stl') return;
+
     if (selectedFormat === 'stl') {
-      handleDownloadSTL();
+      if (blob) downloadSTLFile(blob, currentMessage);
+    } else if (selectedFormat === 'scad') {
+      if (code) downloadOpenSCADFile(code, currentMessage);
     } else {
-      handleDownloadOpenSCAD();
+      // 2D formats: dxf-flat, dxf-cut, svg-flat, svg-cut
+      const [fmt, proj] = selectedFormat.split('-') as [
+        'dxf' | 'svg',
+        'flat' | 'cut',
+      ];
+      setIsExporting(true);
+      try {
+        const output = await export2D(code!, fmt, proj, parameters);
+        if (fmt === 'dxf') downloadDXFFile(output, currentMessage);
+        else downloadSVGFile(output, currentMessage);
+      } catch (e) {
+        console.error('2D export failed:', e);
+      } finally {
+        setIsExporting(false);
+      }
     }
   };
 
-  const handleDownloadSTL = () => {
-    if (!blob) return;
-    downloadSTLFile(blob, currentMessage);
-  };
-
-  const handleDownloadOpenSCAD = () => {
-    if (!currentMessage?.content.artifact?.code) return;
-    downloadOpenSCADFile(currentMessage.content.artifact.code, currentMessage);
-  };
-
   const isDownloadDisabled =
-    selectedFormat === 'stl' ? !blob : !currentMessage?.content.artifact?.code;
+    isExporting ||
+    (selectedFormat === 'stl'
+      ? !blob
+      : !currentMessage?.content.artifact?.code);
 
   return (
     <div className="h-full w-full max-w-full border-l border-gray-200/20 bg-adam-bg-secondary-dark dark:border-gray-800">
@@ -152,8 +213,12 @@ export function ParameterSection() {
               aria-label={`download ${selectedFormat.toUpperCase()} file`}
               className="h-12 flex-1 rounded-r-none bg-adam-neutral-50 text-adam-neutral-800 hover:bg-adam-neutral-100 hover:text-adam-neutral-900"
             >
-              <Download className="mr-2 h-4 w-4" />
-              {selectedFormat.toUpperCase()}
+              {isExporting ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="mr-2 h-4 w-4" />
+              )}
+              {selectedFormat.split('-')[0].toUpperCase()}
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -175,8 +240,8 @@ export function ParameterSection() {
                   className="cursor-pointer text-adam-text-primary"
                 >
                   <span className="text-sm">.STL</span>
-                  <span className="ml-3 text-xs text-adam-text-primary/60">
-                    3D Printing
+                  <span className="ml-auto text-xs text-adam-text-primary/60">
+                    3D Print
                   </span>
                 </DropdownMenuItem>
                 <DropdownMenuItem
@@ -185,8 +250,49 @@ export function ParameterSection() {
                   className="cursor-pointer text-adam-text-primary"
                 >
                   <span className="text-sm">.SCAD</span>
-                  <span className="ml-3 text-xs text-adam-text-primary/60">
-                    OpenSCAD Code
+                  <span className="ml-auto text-xs text-adam-text-primary/60">
+                    Source
+                  </span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator className="bg-adam-neutral-600" />
+                <DropdownMenuItem
+                  onClick={() => setSelectedFormat('dxf-flat')}
+                  disabled={!currentMessage?.content.artifact?.code}
+                  className="cursor-pointer text-adam-text-primary"
+                >
+                  <span className="text-sm">.DXF</span>
+                  <span className="ml-auto text-xs text-adam-text-primary/60">
+                    Top view
+                  </span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => setSelectedFormat('dxf-cut')}
+                  disabled={!currentMessage?.content.artifact?.code}
+                  className="cursor-pointer text-adam-text-primary"
+                >
+                  <span className="text-sm">.DXF</span>
+                  <span className="ml-auto text-xs text-adam-text-primary/60">
+                    Cross-section
+                  </span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => setSelectedFormat('svg-flat')}
+                  disabled={!currentMessage?.content.artifact?.code}
+                  className="cursor-pointer text-adam-text-primary"
+                >
+                  <span className="text-sm">.SVG</span>
+                  <span className="ml-auto text-xs text-adam-text-primary/60">
+                    Top view
+                  </span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => setSelectedFormat('svg-cut')}
+                  disabled={!currentMessage?.content.artifact?.code}
+                  className="cursor-pointer text-adam-text-primary"
+                >
+                  <span className="text-sm">.SVG</span>
+                  <span className="ml-auto text-xs text-adam-text-primary/60">
+                    Cross-section
                   </span>
                 </DropdownMenuItem>
               </DropdownMenuContent>

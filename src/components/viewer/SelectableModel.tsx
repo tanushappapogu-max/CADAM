@@ -111,6 +111,8 @@ export function SelectableModel({ geometry }: SelectableModelProps) {
   const createFaceHighlightGeometry = useCallback(
     (faceIndex: number, sourceGeometry: THREE.BufferGeometry) => {
       const positionAttr = sourceGeometry.getAttribute('position');
+      if (!positionAttr) return null;
+
       const indexAttr = sourceGeometry.getIndex();
 
       // Get vertex indices for the face
@@ -150,9 +152,9 @@ export function SelectableModel({ geometry }: SelectableModelProps) {
   // Create selected faces geometries
   const selectedFaceGeometries = useMemo(() => {
     if (!geometry || annotatedFaceIndices.size === 0) return [];
-    return Array.from(annotatedFaceIndices).map((faceIndex) =>
-      createFaceHighlightGeometry(faceIndex, geometry)
-    );
+    return Array.from(annotatedFaceIndices)
+      .map((faceIndex) => createFaceHighlightGeometry(faceIndex, geometry))
+      .filter((geom): geom is THREE.BufferGeometry => geom !== null);
   }, [geometry, annotatedFaceIndices, createFaceHighlightGeometry]);
 
   return (

@@ -1,3 +1,4 @@
+import { ComponentType } from 'react';
 import { useAnnotations } from '@/contexts/AnnotationContext';
 import { SelectionMode } from '@/types/annotations';
 import { cn } from '@/lib/utils';
@@ -14,7 +15,7 @@ interface SelectionToolbarProps {
 
 const SELECTION_MODES: {
   mode: SelectionMode;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: ComponentType<{ className?: string }>;
   label: string;
   description: string;
 }[] = [

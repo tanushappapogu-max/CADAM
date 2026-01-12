@@ -1,4 +1,4 @@
-import { RefreshCcw, Download, ChevronUp } from 'lucide-react';
+import { RefreshCcw, Download, ChevronUp, Tag } from 'lucide-react';
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -22,6 +22,13 @@ import { useCurrentMessage } from '@/contexts/CurrentMessageContext';
 import { downloadSTLFile, downloadOpenSCADFile } from '@/utils/downloadUtils';
 import { useChangeParameters } from '@/services/messageService';
 import { useBlob } from '@/contexts/BlobContext';
+import { AnnotationPanel } from '@/components/viewer/AnnotationPanel';
+import { useAnnotations } from '@/contexts/AnnotationContext';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 
 export function ParameterSection() {
   const { blob } = useBlob();
@@ -29,6 +36,8 @@ export function ParameterSection() {
   const { currentMessage } = useCurrentMessage();
   const parameters = currentMessage?.content.artifact?.parameters ?? [];
   const [selectedFormat, setSelectedFormat] = useState<'stl' | 'scad'>('stl');
+  const { hasAnnotations } = useAnnotations();
+  const [isAnnotationsOpen, setIsAnnotationsOpen] = useState(true);
 
   // Debounce timer for compilation
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -130,8 +139,9 @@ export function ParameterSection() {
         </TooltipProvider>
       </div>
       <div className="flex h-[calc(100%-3.5rem)] flex-col justify-between overflow-hidden">
-        <ScrollArea className="flex-1 px-6 py-6">
-          <div className="flex flex-col gap-3">
+        <ScrollArea className="flex-1">
+          {/* Parameters Section */}
+          <div className="flex flex-col gap-3 px-6 py-6">
             {parameters.map((param) => (
               <ParameterInput
                 key={param.name}
@@ -140,6 +150,37 @@ export function ParameterSection() {
               />
             ))}
           </div>
+
+          {/* Annotations Section */}
+          <Collapsible
+            open={isAnnotationsOpen}
+            onOpenChange={setIsAnnotationsOpen}
+            className="border-t border-adam-neutral-700"
+          >
+            <CollapsibleTrigger asChild>
+              <button className="flex w-full items-center justify-between px-6 py-3 text-left transition-colors hover:bg-adam-neutral-800/50">
+                <div className="flex items-center gap-2">
+                  <Tag className="h-4 w-4 text-adam-blue" />
+                  <span className="text-sm font-semibold text-adam-text-primary">
+                    Annotations
+                  </span>
+                  {hasAnnotations && (
+                    <span className="rounded-full bg-adam-blue/20 px-2 py-0.5 text-xs text-adam-blue">
+                      Active
+                    </span>
+                  )}
+                </div>
+                <ChevronUp
+                  className={`h-4 w-4 text-adam-text-secondary transition-transform duration-200 ${
+                    isAnnotationsOpen ? '' : 'rotate-180'
+                  }`}
+                />
+              </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <AnnotationPanel parameters={parameters} />
+            </CollapsibleContent>
+          </Collapsible>
         </ScrollArea>
         <div className="flex flex-col gap-4 border-t border-adam-neutral-700 px-6 py-6">
           <div>

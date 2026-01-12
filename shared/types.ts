@@ -37,6 +37,8 @@ export type Content = {
   // For streaming support - shows in-progress tool calls
   toolCalls?: ToolCall[];
   thinking?: boolean;
+  // Annotation context for spatial reasoning - describes selected faces, edges, points on the model
+  annotationContext?: string;
 };
 
 export type MeshFileType = string;

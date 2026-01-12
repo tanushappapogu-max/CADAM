@@ -43,6 +43,8 @@ interface TextAreaChatProps {
   setModel: (model: Model) => void;
   conversation: Pick<Conversation, 'id' | 'user_id'>;
   showPromptGenerator?: boolean;
+  // Optional annotation context for spatial reasoning (from AnnotationContext)
+  annotationContext?: string;
 }
 
 const VALID_IMAGE_FORMATS = [
@@ -60,6 +62,7 @@ function TextAreaChat({
   setModel,
   conversation,
   showPromptGenerator = false,
+  annotationContext,
 }: TextAreaChatProps) {
   const [isFocused, setIsFocused] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -149,6 +152,8 @@ function TextAreaChat({
       }),
       model: model,
       thinking: supportsThinking, // Automatically enable thinking for models that support it
+      // Include annotation context for spatial reasoning if available
+      ...(annotationContext && { annotationContext }),
     };
     onSubmit(content);
     setInput('');

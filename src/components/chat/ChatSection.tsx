@@ -13,6 +13,7 @@ import {
   useIsLoading,
   useSendContentMutation,
 } from '@/services/messageService';
+import { useAnnotations } from '@/contexts/AnnotationContext';
 
 interface ChatSectionProps {
   messages: TreeNode<Message>[];
@@ -24,6 +25,10 @@ export function ChatSection({ messages }: ChatSectionProps) {
   const [model, setModel] = useState<Model>(PARAMETRIC_MODELS[0].id);
   const isLoading = useIsLoading();
   const { mutate: sendMessage } = useSendContentMutation({ conversation });
+
+  // Get annotation context for spatial reasoning
+  const { getPromptContext, hasAnnotations } = useAnnotations();
+  const annotationContext = hasAnnotations ? getPromptContext() : undefined;
 
   // Sync model selection with the conversation history (last used model)
   useEffect(() => {
@@ -118,6 +123,7 @@ export function ChatSection({ messages }: ChatSectionProps) {
           model={model}
           setModel={setModel}
           conversation={conversation}
+          annotationContext={annotationContext}
         />
       </div>
     </div>

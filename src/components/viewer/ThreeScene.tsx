@@ -11,15 +11,23 @@ import {
 import * as THREE from 'three';
 import { useState } from 'react';
 import { OrthographicPerspectiveToggle } from '@/components/viewer/OrthographicPerspectiveToggle';
-import { useColor } from '@/contexts/ColorContext';
+import { SelectionToolbar } from '@/components/viewer/SelectionToolbar';
+import { SelectableModel } from '@/components/viewer/SelectableModel';
+import { useAnnotations } from '@/contexts/AnnotationContext';
 
 export function ThreeScene({ geometry }: { geometry: THREE.BufferGeometry }) {
-  const { color } = useColor();
   const [isOrthographic, setIsOrthographic] = useState(true);
+  const { selectionMode } = useAnnotations();
+
+  // Determine cursor style based on selection mode
+  const cursorStyle = selectionMode !== 'none' ? 'crosshair' : 'grab';
 
   return (
     <div className="relative h-full w-full overflow-hidden">
-      <Canvas className="block h-full w-full">
+      <Canvas
+        className="block h-full w-full"
+        style={{ cursor: cursorStyle }}
+      >
         <color attach="background" args={['#3B3B3B']} />
         {isOrthographic ? (
           <OrthographicCamera
@@ -47,36 +55,24 @@ export function ThreeScene({ geometry }: { geometry: THREE.BufferGeometry }) {
           <directionalLight position={[-5, 5, -5]} intensity={0.2} />
           <directionalLight position={[0, 5, 0]} intensity={0.2} />
           <directionalLight position={[-5, -5, -5]} intensity={0.6} />
-          <mesh
-            geometry={geometry}
-            rotation={[-Math.PI / 2, 0, 0]}
-            position={[0, 0, 0]}
-          >
-            <meshStandardMaterial
-              color={color}
-              metalness={0.6}
-              roughness={0.3}
-              envMapIntensity={0.3}
-            />
-          </mesh>
+          <SelectableModel geometry={geometry} />
         </Stage>
-        {/* <Grid
-          position={[0, 0, 0]}
-          cellSize={30}
-          cellThickness={0.5}
-          sectionSize={10}
-          sectionColor="gray"
-          sectionThickness={0.5}
-          fadeDistance={500}
-          fadeStrength={1}
-          followCamera={false}
-          infiniteGrid={true}
-        /> */}
-        <OrbitControls makeDefault enableDamping={true} dampingFactor={0.05} />
+        <OrbitControls
+          makeDefault
+          enableDamping={true}
+          dampingFactor={0.05}
+          // Disable orbit controls when in selection mode to allow clicking
+          enabled={selectionMode === 'none'}
+        />
         <GizmoHelper alignment="bottom-right" margin={[80, 90]}>
           <GizmoViewcube />
         </GizmoHelper>
       </Canvas>
+
+      {/* Selection toolbar */}
+      <div className="absolute left-2 top-2">
+        <SelectionToolbar />
+      </div>
 
       <div className="absolute bottom-2 right-9 flex flex-col items-center">
         <div className="flex items-center gap-2">

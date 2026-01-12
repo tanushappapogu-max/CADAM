@@ -35,7 +35,7 @@ const SELECTION_MODES: {
     mode: 'edge',
     icon: Minus,
     label: 'Edge',
-    description: 'Select edges to annotate (coming soon)',
+    description: 'Select edges to fillet, chamfer, etc.',
   },
   {
     mode: 'point',
@@ -53,7 +53,7 @@ export function SelectionToolbar({ disabled = false }: SelectionToolbarProps) {
     <div className="flex items-center gap-1 rounded-lg bg-adam-neutral-800/90 p-1 backdrop-blur-sm">
       {SELECTION_MODES.map(({ mode, icon: Icon, label, description }) => {
         const isActive = selectionMode === mode;
-        const isDisabled = disabled || (mode === 'edge'); // Edge mode not implemented yet
+        const isDisabled = disabled;
 
         return (
           <Tooltip key={mode}>

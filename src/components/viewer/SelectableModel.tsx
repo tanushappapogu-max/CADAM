@@ -4,9 +4,35 @@ import * as THREE from 'three';
 import { useAnnotations } from '@/contexts/AnnotationContext';
 import { useColor } from '@/contexts/ColorContext';
 import { ANNOTATION_COLORS } from '@/types/annotations';
+import { Line } from '@react-three/drei';
 
 interface SelectableModelProps {
   geometry: THREE.BufferGeometry;
+}
+
+// Helper to find the closest edge to a point
+function findClosestEdge(
+  point: THREE.Vector3,
+  edges: Array<{ start: THREE.Vector3; end: THREE.Vector3; index: number }>,
+  threshold: number = 2
+): { start: THREE.Vector3; end: THREE.Vector3; index: number } | null {
+  let closest: { start: THREE.Vector3; end: THREE.Vector3; index: number } | null = null;
+  let minDist = threshold;
+
+  for (const edge of edges) {
+    // Calculate distance from point to line segment
+    const line = new THREE.Line3(edge.start, edge.end);
+    const closestPoint = new THREE.Vector3();
+    line.closestPointToPoint(point, true, closestPoint);
+    const dist = point.distanceTo(closestPoint);
+
+    if (dist < minDist) {
+      minDist = dist;
+      closest = edge;
+    }
+  }
+
+  return closest;
 }
 
 export function SelectableModel({ geometry }: SelectableModelProps) {
@@ -18,12 +44,42 @@ export function SelectableModel({ geometry }: SelectableModelProps) {
     selectionState,
     setHoveredFace,
     setHoveredPoint,
+    setHoveredEdge,
     addFaceFromRaycast,
     addPointAnnotation,
+    addEdgeFromPoints,
     annotations,
   } = useAnnotations();
 
   const [hoveredFaceIndex, setLocalHoveredFaceIndex] = useState<number | null>(null);
+  const [hoveredEdgeIndex, setLocalHoveredEdgeIndex] = useState<number | null>(null);
+
+  // Extract edges from geometry using EdgesGeometry
+  const edges = useMemo(() => {
+    if (!geometry) return [];
+
+    const edgesGeom = new THREE.EdgesGeometry(geometry, 30); // 30 degree threshold
+    const positions = edgesGeom.getAttribute('position');
+    if (!positions) return [];
+
+    const edgeList: Array<{ start: THREE.Vector3; end: THREE.Vector3; index: number }> = [];
+
+    for (let i = 0; i < positions.count; i += 2) {
+      const start = new THREE.Vector3(
+        positions.getX(i),
+        positions.getY(i),
+        positions.getZ(i)
+      );
+      const end = new THREE.Vector3(
+        positions.getX(i + 1),
+        positions.getY(i + 1),
+        positions.getZ(i + 1)
+      );
+      edgeList.push({ start, end, index: i / 2 });
+    }
+
+    return edgeList;
+  }, [geometry]);
 
   // Get face indices that are annotated
   const annotatedFaceIndices = useMemo(() => {
@@ -41,7 +97,9 @@ export function SelectableModel({ geometry }: SelectableModelProps) {
     (event: ThreeEvent<PointerEvent>) => {
       if (selectionMode === 'none' || !meshRef.current) {
         setLocalHoveredFaceIndex(null);
+        setLocalHoveredEdgeIndex(null);
         setHoveredFace(null);
+        setHoveredEdge(null);
         return;
       }
 
@@ -49,20 +107,38 @@ export function SelectableModel({ geometry }: SelectableModelProps) {
 
       if (selectionMode === 'face' && event.faceIndex !== undefined) {
         setLocalHoveredFaceIndex(event.faceIndex);
+        setLocalHoveredEdgeIndex(null);
         setHoveredFace(event.faceIndex);
+        setHoveredEdge(null);
+      } else if (selectionMode === 'edge' && event.point) {
+        // Find closest edge to the intersection point
+        const closestEdge = findClosestEdge(event.point, edges, 3);
+        if (closestEdge) {
+          setLocalHoveredEdgeIndex(closestEdge.index);
+          setHoveredEdge({ start: closestEdge.start, end: closestEdge.end });
+        } else {
+          setLocalHoveredEdgeIndex(null);
+          setHoveredEdge(null);
+        }
+        setLocalHoveredFaceIndex(null);
+        setHoveredFace(null);
       } else if (selectionMode === 'point' && event.point) {
         setHoveredPoint(event.point.clone());
+        setLocalHoveredFaceIndex(null);
+        setLocalHoveredEdgeIndex(null);
       }
     },
-    [selectionMode, setHoveredFace, setHoveredPoint]
+    [selectionMode, setHoveredFace, setHoveredPoint, setHoveredEdge, edges]
   );
 
   // Handle pointer leave
   const handlePointerLeave = useCallback(() => {
     setLocalHoveredFaceIndex(null);
+    setLocalHoveredEdgeIndex(null);
     setHoveredFace(null);
     setHoveredPoint(null);
-  }, [setHoveredFace, setHoveredPoint]);
+    setHoveredEdge(null);
+  }, [setHoveredFace, setHoveredPoint, setHoveredEdge]);
 
   // Handle click to add annotation
   const handleClick = useCallback(
@@ -73,11 +149,16 @@ export function SelectableModel({ geometry }: SelectableModelProps) {
 
       if (selectionMode === 'face' && event.faceIndex !== undefined) {
         addFaceFromRaycast(event.faceIndex, geometry);
+      } else if (selectionMode === 'edge' && event.point) {
+        const closestEdge = findClosestEdge(event.point, edges, 3);
+        if (closestEdge) {
+          addEdgeFromPoints(closestEdge.start, closestEdge.end);
+        }
       } else if (selectionMode === 'point' && event.point) {
         addPointAnnotation(event.point.clone());
       }
     },
-    [selectionMode, geometry, addFaceFromRaycast, addPointAnnotation]
+    [selectionMode, geometry, edges, addFaceFromRaycast, addPointAnnotation, addEdgeFromPoints]
   );
 
   // Create highlight materials
@@ -197,6 +278,39 @@ export function SelectableModel({ geometry }: SelectableModelProps) {
           material={selectedMaterial}
         />
       ))}
+
+      {/* Hover highlight for edge mode */}
+      {hoveredEdgeIndex !== null && selectionMode === 'edge' && edges[hoveredEdgeIndex] && (
+        <group rotation={[-Math.PI / 2, 0, 0]}>
+          <Line
+            points={[
+              [edges[hoveredEdgeIndex].start.x, edges[hoveredEdgeIndex].start.y, edges[hoveredEdgeIndex].start.z],
+              [edges[hoveredEdgeIndex].end.x, edges[hoveredEdgeIndex].end.y, edges[hoveredEdgeIndex].end.z],
+            ]}
+            color={ANNOTATION_COLORS.hover}
+            lineWidth={4}
+          />
+        </group>
+      )}
+
+      {/* Selected edge annotations */}
+      {annotations
+        .filter((ann) => ann.type === 'edge' && ann.visible)
+        .map((ann) => {
+          if (ann.type !== 'edge') return null;
+          return (
+            <group key={ann.id} rotation={[-Math.PI / 2, 0, 0]}>
+              <Line
+                points={[
+                  [ann.startPoint.x, ann.startPoint.y, ann.startPoint.z],
+                  [ann.endPoint.x, ann.endPoint.y, ann.endPoint.z],
+                ]}
+                color={ann.color || ANNOTATION_COLORS.edge}
+                lineWidth={3}
+              />
+            </group>
+          );
+        })}
 
       {/* Point annotations visualization */}
       {annotations

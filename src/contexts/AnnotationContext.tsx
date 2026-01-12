@@ -292,7 +292,34 @@ export function AnnotationProvider({ children }: { children: ReactNode }) {
 export function useAnnotations() {
   const context = useContext(AnnotationContext);
   if (!context) {
-    throw new Error('useAnnotations must be used within an AnnotationProvider');
+    // Return a safe default when used outside provider (e.g., during SSR or initial mount)
+    return {
+      annotations: [],
+      addAnnotation: () => ({} as Annotation),
+      removeAnnotation: () => {},
+      updateAnnotation: () => {},
+      clearAnnotations: () => {},
+      selectionMode: 'none' as SelectionMode,
+      setSelectionMode: () => {},
+      selectionState: {
+        mode: 'none' as SelectionMode,
+        hoveredFaceIndex: null,
+        hoveredEdge: null,
+        hoveredPoint: null,
+        isMultiSelect: false,
+      },
+      setHoveredFace: () => {},
+      setHoveredEdge: () => {},
+      setHoveredPoint: () => {},
+      setMultiSelect: () => {},
+      addFaceFromRaycast: () => ({} as FaceAnnotation),
+      addEdgeFromPoints: () => ({} as EdgeAnnotation),
+      addPointAnnotation: () => ({} as PointAnnotation),
+      getPromptContext: () => '',
+      hasAnnotations: false,
+      toggleAnnotationVisibility: () => {},
+      getAnnotation: () => undefined,
+    };
   }
   return context;
 }

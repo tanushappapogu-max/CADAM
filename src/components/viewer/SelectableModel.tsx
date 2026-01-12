@@ -25,15 +25,6 @@ export function SelectableModel({ geometry }: SelectableModelProps) {
 
   const [hoveredFaceIndex, setLocalHoveredFaceIndex] = useState<number | null>(null);
 
-  // Create a geometry for highlighting hovered/selected faces
-  const highlightGeometry = useMemo(() => {
-    if (!geometry) return null;
-
-    // Clone the geometry for highlighting
-    const highlightGeom = geometry.clone();
-    return highlightGeom;
-  }, [geometry]);
-
   // Get face indices that are annotated
   const annotatedFaceIndices = useMemo(() => {
     const indices = new Set<number>();
@@ -163,9 +154,6 @@ export function SelectableModel({ geometry }: SelectableModelProps) {
       createFaceHighlightGeometry(faceIndex, geometry)
     );
   }, [geometry, annotatedFaceIndices, createFaceHighlightGeometry]);
-
-  // Cursor style based on selection mode
-  const cursorStyle = selectionMode !== 'none' ? 'crosshair' : 'default';
 
   return (
     <group>

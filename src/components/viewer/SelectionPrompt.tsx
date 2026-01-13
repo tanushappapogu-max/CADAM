@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, KeyboardEvent } from 'react';
 import { useAnnotations } from '@/contexts/AnnotationContext';
 import { cn } from '@/lib/utils';
 import { X, Send, Sparkles } from 'lucide-react';
@@ -49,7 +49,7 @@ export function SelectionPrompt({ onSubmit, disabled }: SelectionPromptProps) {
     clearAnnotations();
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSubmit();

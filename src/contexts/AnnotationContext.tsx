@@ -98,8 +98,8 @@ export function AnnotationProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const updateAnnotation = useCallback((id: string, updates: Partial<Annotation>) => {
-    setAnnotations((prev) =>
-      prev.map((a) => (a.id === id ? ({ ...a, ...updates } as Annotation) : a))
+    setAnnotations((prev): Annotation[] =>
+      prev.map((a): Annotation => (a.id === id ? ({ ...a, ...updates } as Annotation) : a))
     );
   }, []);
 

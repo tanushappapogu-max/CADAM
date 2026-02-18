@@ -56,20 +56,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const initializeAuth = async () => {
       try {
         let session = null;
-        const {
-          data: { session: refreshedSession },
-        } = await supabase.auth.refreshSession();
-        if (!refreshedSession) {
-          const {
-            data: { session: newSession },
-          } = await supabase.auth.signInAnonymously();
-          session = newSession;
-        } else {
-          session = refreshedSession;
+
+        // Try to refresh existing session
+        const refreshResult = await supabase.auth.refreshSession();
+        session = refreshResult.data?.session ?? null;
+
+        // If no existing session, sign in anonymously
+        if (!session) {
+          const anonResult = await supabase.auth.signInAnonymously();
+          if (anonResult.error) {
+            console.error('[Auth] Anonymous sign-in failed:', anonResult.error);
+          }
+          session = anonResult.data?.session ?? null;
         }
+
         setSession(session);
         localStorage.setItem('session', JSON.stringify(session));
         setUser(session?.user ?? null);
+      } catch (err) {
+        console.error('[Auth] Failed to initialize auth:', err);
       } finally {
         setIsLoading(false);
       }

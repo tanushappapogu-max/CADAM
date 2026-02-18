@@ -838,8 +838,8 @@ function TextAreaChat({
             <div className={`h-full w-full ${mode === 'architecture' ? 'p-0.5' : 'p-1.5'}`}>
               <img
                 src={mode === 'architecture'
-                  ? `${import.meta.env.BASE_URL}/logos/Screenshot 2026-02-16 at 10.57.01 PM.svg`
-                  : `${import.meta.env.BASE_URL}/Adam-Logo.png`
+                  ? `${import.meta.env.BASE_URL}logos/parametrix-logo.svg`
+                  : `${import.meta.env.BASE_URL}Adam-Logo.png`
                 }
                 alt={mode === 'architecture' ? 'Parametrix' : 'Adam Logo'}
                 className="h-full w-full object-contain"

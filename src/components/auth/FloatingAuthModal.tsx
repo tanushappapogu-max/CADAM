@@ -118,7 +118,7 @@ export function FloatingAuthModal() {
             <div className="flex flex-col items-center gap-3 text-center">
               <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-adam-blue/20 to-transparent">
                 <img
-                  src={`${import.meta.env.BASE_URL}/adam-logo.svg`}
+                  src={`${import.meta.env.BASE_URL}adam-logo.svg`}
                   alt="Logo"
                   className="h-6 w-6"
                 />

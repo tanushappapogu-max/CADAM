@@ -97,8 +97,8 @@ export function AssistantMessage({
               <AvatarImage
                 src={
                   mode === "architecture"
-                    ? `${import.meta.env.BASE_URL}/logos/Screenshot 2026-02-16 at 10.57.01 PM.svg`
-                    : `${import.meta.env.BASE_URL}/adam-logo.svg`
+                    ? `${import.meta.env.BASE_URL}logos/parametrix-logo.svg`
+                    : `${import.meta.env.BASE_URL}adam-logo.svg`
                 }
                 alt={mode === "architecture" ? "Parametrix" : "Adam"}
                 className={mode === "architecture" ? "rounded-sm object-contain" : ""}

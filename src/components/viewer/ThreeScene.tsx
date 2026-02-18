@@ -326,7 +326,7 @@ export function ThreeScene({ geometry, componentGeometries }: ThreeSceneProps) {
         )}
         <Stage environment={null} intensity={0.6} position={[0, 0, 0]}>
           <Environment
-            files={`${import.meta.env.BASE_URL}/city.hdr`}
+            files={`${import.meta.env.BASE_URL}city.hdr`}
             background={false}
           />
           {isWireframe ? (

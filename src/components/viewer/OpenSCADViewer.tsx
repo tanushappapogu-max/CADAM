@@ -81,7 +81,7 @@ export function OpenSCADViewer() {
         // In architecture mode, pre-load the parts library if code uses it
         if (isArchitecture && !archLibLoadedRef.current && scadCode.includes('architecture_parts.scad')) {
           try {
-            const response = await fetch(`${import.meta.env.BASE_URL}/libraries/architecture_parts.scad`);
+            const response = await fetch(`${import.meta.env.BASE_URL}libraries/architecture_parts.scad`);
             const text = await response.text();
             const blob = new Blob([text], { type: 'text/plain' });
             await writeFile('architecture_parts.scad', blob);

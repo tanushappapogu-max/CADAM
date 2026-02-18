@@ -106,13 +106,13 @@ export function Sidebar({ isSidebarOpen }: SidebarProps) {
                   {mode === "architecture" ? (
                     <img
                       className="mx-auto h-12 w-full object-contain"
-                      src={`${import.meta.env.BASE_URL}/logos/Screenshot 2026-02-16 at 10.56.12 PM.svg`}
+                      src={`${import.meta.env.BASE_URL}logos/parametrix-logo-full.svg`}
                       alt="Parametrix"
                     />
                   ) : (
                     <img
                       className="mx-auto h-8 w-full"
-                      src={`${import.meta.env.BASE_URL}/adam-logo-full.svg`}
+                      src={`${import.meta.env.BASE_URL}adam-logo-full.svg`}
                       alt="CADAM"
                     />
                   )}
@@ -121,8 +121,8 @@ export function Sidebar({ isSidebarOpen }: SidebarProps) {
                 <img
                   src={
                     mode === "architecture"
-                      ? `${import.meta.env.BASE_URL}/logos/Screenshot 2026-02-16 at 10.57.01 PM.svg`
-                      : `${import.meta.env.BASE_URL}/adam-logo.svg`
+                      ? `${import.meta.env.BASE_URL}logos/parametrix-logo.svg`
+                      : `${import.meta.env.BASE_URL}adam-logo.svg`
                   }
                   alt="Logo"
                   className={mode === "architecture" ? "h-9 w-9 min-w-9 rounded-md object-contain" : "h-8 w-8 min-w-8 object-contain"}

@@ -18,6 +18,7 @@ import {
 import { updateParameter } from '@/utils/parameterUtils';
 import { useCallback } from 'react';
 import { PARAMETRIC_MODELS } from '@/lib/utils';
+import { useMode } from '@/contexts/ModeContext';
 
 function messageSentConversationUpdate(
   newMessage: Message,
@@ -157,11 +158,13 @@ export function useParametricChatMutation({
       messageId,
       conversationId,
       thinking,
+      mode,
     }: {
       model: Model;
       messageId: string;
       conversationId: string;
       thinking?: boolean;
+      mode?: string;
     }) => {
       const newMessageId = crypto.randomUUID();
       let initialized = false;
@@ -183,6 +186,7 @@ export function useParametricChatMutation({
             model,
             newMessageId,
             thinking,
+            mode,
           }),
         },
       );
@@ -344,6 +348,7 @@ export function useSendContentMutation({
   >;
 }) {
   const { mutateAsync: insertMessageAsync } = useInsertMessageMutation();
+  const { mode } = useMode();
 
   const { mutateAsync: sendToParametricChat } = useParametricChatMutation({
     conversationId: conversation.id,
@@ -364,6 +369,7 @@ export function useSendContentMutation({
         messageId: userMessage.id,
         conversationId: conversation.id,
         thinking: content.thinking,
+        mode,
       });
     },
   });
@@ -422,6 +428,7 @@ export function useUpdateMessageOptimisticMutation() {
 
 export function useEditMessageMutation() {
   const { conversation } = useConversation();
+  const { mode } = useMode();
 
   const { mutateAsync: insertMessageAsync } = useInsertMessageMutation();
 
@@ -444,6 +451,7 @@ export function useEditMessageMutation() {
         messageId: userMessage.id,
         conversationId: conversation.id,
         thinking: updatedMessage.content.thinking,
+        mode,
       });
     },
     onError: (error) => {
@@ -455,6 +463,7 @@ export function useEditMessageMutation() {
 
 export function useRetryMessageMutation() {
   const { conversation, updateConversationAsync } = useConversation();
+  const { mode } = useMode();
 
   const { mutateAsync: sendToParametricChat } = useParametricChatMutation({
     conversationId: conversation.id,
@@ -481,6 +490,7 @@ export function useRetryMessageMutation() {
         messageId: id,
         conversationId: conversation.id,
         thinking,
+        mode,
       });
     },
     onError: (error) => {

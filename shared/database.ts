@@ -39,6 +39,7 @@ export type Database = {
           created_at: string | null;
           current_message_leaf_id: string | null;
           id: string;
+          mode: string;
           title: string;
           updated_at: string | null;
           user_id: string;
@@ -47,6 +48,7 @@ export type Database = {
           created_at?: string | null;
           current_message_leaf_id?: string | null;
           id?: string;
+          mode?: string;
           title: string;
           updated_at?: string | null;
           user_id: string;
@@ -55,6 +57,7 @@ export type Database = {
           created_at?: string | null;
           current_message_leaf_id?: string | null;
           id?: string;
+          mode?: string;
           title?: string;
           updated_at?: string | null;
           user_id?: string;

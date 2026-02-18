@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
+import { useMode } from '@/contexts/ModeContext';
 
 type Props = {
   message?: string;
 };
 
 const Loader = ({ message }: Props) => {
+  const { mode } = useMode();
   const dot2 = useRef<HTMLSpanElement>(null);
   const dot3 = useRef<HTMLSpanElement>(null);
   const loadingMessage = useRef<HTMLParagraphElement>(null);
@@ -60,7 +62,7 @@ const Loader = ({ message }: Props) => {
     <div className="flex flex-col items-center justify-center">
       <div className="relative h-32 w-32">
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="h-16 w-16 animate-spin rounded-full border-4 border-adam-neutral-800 border-t-adam-blue" />
+          <div className={`h-16 w-16 animate-spin rounded-full border-4 border-adam-neutral-800 ${mode === 'architecture' ? 'border-t-[#C77DFF]' : 'border-t-adam-blue'}`} />
         </div>
       </div>
       {message && (

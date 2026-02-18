@@ -13,6 +13,7 @@ import {
   useIsLoading,
   useSendContentMutation,
 } from '@/services/messageService';
+import { useMode } from '@/contexts/ModeContext';
 
 interface ChatSectionProps {
   messages: TreeNode<Message>[];
@@ -24,6 +25,7 @@ export function ChatSection({ messages }: ChatSectionProps) {
   const [model, setModel] = useState<Model>(PARAMETRIC_MODELS[0].id);
   const isLoading = useIsLoading();
   const { mutate: sendMessage } = useSendContentMutation({ conversation });
+  const { mode } = useMode();
 
   // Sync model selection with the conversation history (last used model)
   useEffect(() => {
@@ -113,7 +115,7 @@ export function ChatSection({ messages }: ChatSectionProps) {
       <div className="w-full min-w-52 max-w-xl bg-transparent px-4 pb-6">
         <TextAreaChat
           onSubmit={sendMessage}
-          placeholder="Keep iterating with Adam..."
+          placeholder={mode === 'architecture' ? 'Keep iterating with Parametrix...' : 'Keep iterating with Adam...'}
           disabled={isLoading}
           model={model}
           setModel={setModel}

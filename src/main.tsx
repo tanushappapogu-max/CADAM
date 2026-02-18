@@ -15,6 +15,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '@/contexts/AuthProvider.tsx';
 import { Toaster } from '@/components/ui/toaster.tsx';
 import { TooltipProvider } from '@/components/ui/tooltip.tsx';
+import { ModeProvider } from '@/contexts/ModeContext.tsx';
 
 const queryClient = new QueryClient();
 
@@ -51,13 +52,15 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <TooltipProvider delayDuration={0}>
-          <Toaster />
-          <RouterProvider
-            router={router}
-            future={{ v7_startTransition: true }}
-          />
-        </TooltipProvider>
+        <ModeProvider>
+          <TooltipProvider delayDuration={0}>
+            <Toaster />
+            <RouterProvider
+              router={router}
+              future={{ v7_startTransition: true }}
+            />
+          </TooltipProvider>
+        </ModeProvider>
       </AuthProvider>
     </QueryClientProvider>
   </StrictMode>,

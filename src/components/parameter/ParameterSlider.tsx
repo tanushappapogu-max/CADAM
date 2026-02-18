@@ -11,6 +11,7 @@ interface ParameterSliderProps {
   onValueChange: (value: number) => void;
   onValueCommit: (value: number) => void;
   step?: number;
+  colorScheme?: 'blue' | 'purple';
 }
 
 function ParameterSliderBase({
@@ -18,6 +19,7 @@ function ParameterSliderBase({
   onValueChange,
   onValueCommit,
   step,
+  colorScheme = 'blue',
 }: ParameterSliderProps) {
   const { min, max } = calculateParameterRange(param);
   const calculatedStep = step ?? calculateParameterStep(param);
@@ -28,6 +30,7 @@ function ParameterSliderBase({
       name={param.name}
       className="w-full"
       defaultMarkerStyle="line"
+      colorScheme={colorScheme}
       onValueChange={([newValue]) => onValueChange(newValue)}
       onValueCommit={([newValue]) => {
         onValueCommit(newValue);

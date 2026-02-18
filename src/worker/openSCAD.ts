@@ -161,13 +161,23 @@ class OpenSCADWrapper {
       })
       .filter((x) => !!x);
 
-    const exportParams = [
-      '--export-format=binstl',
-      '--enable=manifold',
-      '--enable=fast-csg',
-      '--enable=lazy-union',
-      '--enable=roof',
-    ];
+    // Architecture mode uses OFF format to preserve per-face colors from color() calls.
+    // OFF export requires CGAL backend (no manifold) since manifold strips color data.
+    const isArchMode = data.fileType === 'off';
+    const exportParams = isArchMode
+      ? [
+          '--export-format=off',
+          '--enable=fast-csg',
+          '--enable=lazy-union',
+          '--enable=roof',
+        ]
+      : [
+          '--export-format=binstl',
+          '--enable=manifold',
+          '--enable=fast-csg',
+          '--enable=lazy-union',
+          '--enable=roof',
+        ];
 
     const render = await this.executeOpenscad(
       data.code,

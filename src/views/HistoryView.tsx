@@ -15,6 +15,7 @@ import { HistoryConversation } from '@/types/misc';
 import { ConversationCard } from '@/components/history/ConversationCard';
 import { VisualCard } from '@/components/history/VisualCard';
 import { RenameDialogDrawer } from '@/components/history/RenameDialogDrawer';
+import { useMode } from '@/contexts/ModeContext';
 
 export function HistoryView() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -27,6 +28,7 @@ export function HistoryView() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { mode } = useMode();
 
   const handleOpenChange = (open: boolean) => {
     setOpen(open);
@@ -36,7 +38,7 @@ export function HistoryView() {
   };
 
   const conversationQuery = useQuery<HistoryConversation[]>({
-    queryKey: ['conversations'],
+    queryKey: ['conversations', mode],
     enabled: !!user,
     queryFn: async () => {
       const { data: conversationsData, error: conversationsError } =
@@ -46,6 +48,7 @@ export function HistoryView() {
             `*, first_message:messages(content), messagesCount:messages(count)`,
           )
           .eq('user_id', user?.id ?? '')
+          .eq('mode', mode)
           .order('updated_at', { ascending: false })
           .order('created_at', { ascending: false })
           .limit(1, { referencedTable: 'first_message' });

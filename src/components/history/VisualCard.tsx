@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useMode } from '@/contexts/ModeContext';
 import { Link } from 'react-router-dom';
 import {
   Clock,
@@ -47,7 +48,7 @@ interface VisualCardProps {
   onRename: (conversationId: string, newTitle: string) => void;
 }
 
-function ThreePreview({ geometry }: { geometry: BufferGeometry }) {
+function ThreePreview({ geometry, isArch }: { geometry: BufferGeometry; isArch: boolean }) {
   return (
     <Canvas className="h-full w-full">
       <color attach="background" args={['#1a1a1a']} />
@@ -70,7 +71,7 @@ function ThreePreview({ geometry }: { geometry: BufferGeometry }) {
           position={[0, 0, 0]}
         >
           <meshStandardMaterial
-            color="#00A6FF"
+            color={isArch ? '#C77DFF' : '#00A6FF'}
             metalness={0.6}
             roughness={0.3}
             envMapIntensity={0.3}
@@ -93,11 +94,13 @@ export function VisualCard({
   onDelete,
   onRename,
 }: VisualCardProps) {
+  const { mode } = useMode();
   const [artifactCode, setArtifactCode] = useState<string | null>(null);
   const [geometry, setGeometry] = useState<BufferGeometry | null>(null);
   const [isVisible, setIsVisible] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const { compileScad, isCompiling, output, isError } = useOpenSCAD();
+  const isArch = mode === 'architecture';
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -199,7 +202,7 @@ export function VisualCard({
   return (
     <div
       ref={cardRef}
-      className="group relative overflow-hidden rounded-xl border-2 border-adam-neutral-700 bg-adam-background-2 transition-all duration-200 hover:border-adam-blue hover:shadow-[0_0_20px_rgba(0,166,255,0.3)]"
+      className={`group relative overflow-hidden rounded-xl border-2 border-adam-neutral-700 bg-adam-background-2 transition-all duration-200 ${isArch ? 'hover:border-[#C77DFF] hover:shadow-[0_0_20px_rgba(199,125,255,0.3)]' : 'hover:border-adam-blue hover:shadow-[0_0_20px_rgba(0,166,255,0.3)]'}`}
     >
       <Link to={`/editor/${conversation.id}`}>
         <div className="relative aspect-square w-full overflow-hidden bg-gradient-to-br from-adam-background-1 to-adam-background-2">
@@ -210,7 +213,7 @@ export function VisualCard({
           ) : isCompiling ? (
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="flex flex-col items-center gap-2">
-                <Loader2 className="h-8 w-8 animate-spin text-adam-blue" />
+                <Loader2 className={`h-8 w-8 animate-spin ${isArch ? 'text-[#C77DFF]' : 'text-adam-blue'}`} />
                 <span className="text-xs text-adam-neutral-400">
                   Compiling...
                 </span>
@@ -221,7 +224,7 @@ export function VisualCard({
               <Box className="text-adam-neutral-600 h-16 w-16 opacity-50" />
             </div>
           ) : (
-            <ThreePreview geometry={geometry} />
+            <ThreePreview geometry={geometry} isArch={isArch} />
           )}
 
           <div className="absolute inset-0 bg-gradient-to-t from-adam-background-2/90 via-transparent to-transparent opacity-0 transition-opacity duration-200 group-hover:opacity-100" />

@@ -12,6 +12,8 @@ import { useQuery } from '@tanstack/react-query';
 import { ConditionalWrapper } from './ConditionalWrapper';
 import { Conversation } from '@shared/types';
 import { AuthButton } from './auth/AuthButton';
+import { ModeSwitcher } from './ModeSwitcher';
+import { useMode } from '@/contexts/ModeContext';
 
 interface SidebarProps {
   isSidebarOpen: boolean;
@@ -20,9 +22,10 @@ interface SidebarProps {
 export function Sidebar({ isSidebarOpen }: SidebarProps) {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { mode } = useMode();
 
   const { data: recentConversations } = useQuery<Conversation[]>({
-    queryKey: ['conversations', 'recent'],
+    queryKey: ['conversations', 'recent', mode],
     initialData: [],
     queryFn: async () => {
       const { data: conversations, error } = await supabase
@@ -30,6 +33,7 @@ export function Sidebar({ isSidebarOpen }: SidebarProps) {
         .select('*')
         .order('updated_at', { ascending: false })
         .eq('user_id', user?.id ?? '')
+        .eq('mode', mode)
         .limit(10);
 
       if (error) throw error;
@@ -98,24 +102,42 @@ export function Sidebar({ isSidebarOpen }: SidebarProps) {
           <Link to="/">
             <div className="flex cursor-pointer items-center space-x-2">
               {isSidebarOpen ? (
-                <div className="flex w-full">
-                  <img
-                    className="mx-auto h-8 w-full"
-                    src={`${import.meta.env.BASE_URL}/adam-logo-full.svg`}
-                    alt="Logo"
-                  />
+                <div className="flex w-full items-center justify-center">
+                  {mode === "architecture" ? (
+                    <img
+                      className="mx-auto h-12 w-full object-contain"
+                      src={`${import.meta.env.BASE_URL}/logos/Screenshot 2026-02-16 at 10.56.12 PM.svg`}
+                      alt="Parametrix"
+                    />
+                  ) : (
+                    <img
+                      className="mx-auto h-8 w-full"
+                      src={`${import.meta.env.BASE_URL}/adam-logo-full.svg`}
+                      alt="CADAM"
+                    />
+                  )}
                 </div>
               ) : (
                 <img
-                  src={`${import.meta.env.BASE_URL}/adam-logo.svg`}
+                  src={
+                    mode === "architecture"
+                      ? `${import.meta.env.BASE_URL}/logos/Screenshot 2026-02-16 at 10.57.01 PM.svg`
+                      : `${import.meta.env.BASE_URL}/adam-logo.svg`
+                  }
                   alt="Logo"
-                  className="h-8 w-8 min-w-8"
+                  className={mode === "architecture" ? "h-9 w-9 min-w-9 rounded-md object-contain" : "h-8 w-8 min-w-8 object-contain"}
                 />
               )}
             </div>
           </Link>
         </ConditionalWrapper>
       </div>
+
+      {isSidebarOpen && (
+        <div className="px-4 pb-3">
+          <ModeSwitcher />
+        </div>
+      )}
 
       <div className="flex min-h-0 flex-1 flex-col">
         <div
@@ -140,8 +162,8 @@ export function Sidebar({ isSidebarOpen }: SidebarProps) {
                 variant="secondary"
                 className={` ${
                   isSidebarOpen
-                    ? 'flex w-[216px] items-center justify-start gap-2 rounded-[100px] border border-adam-blue bg-adam-background-1 px-4 py-3 text-[#D7D7D7] hover:bg-adam-blue/40 hover:text-adam-text-primary'
-                    : 'flex h-[30px] w-[30px] items-center justify-center rounded-[8px] border-2 border-adam-blue bg-[#191A1A] p-[2px] text-[#D7D7D7] shadow-[0px_4px_10px_0px_rgba(0,166,255,0.24)] hover:bg-adam-blue/40 hover:text-adam-text-primary'
+                    ? `flex w-[216px] items-center justify-start gap-2 rounded-[100px] border bg-adam-background-1 px-4 py-3 text-[#D7D7D7] hover:text-adam-text-primary ${mode === 'architecture' ? 'border-[#C77DFF] hover:bg-[#C77DFF]/40' : 'border-adam-blue hover:bg-adam-blue/40'}`
+                    : `flex h-[30px] w-[30px] items-center justify-center rounded-[8px] border-2 bg-[#191A1A] p-[2px] text-[#D7D7D7] hover:text-adam-text-primary ${mode === 'architecture' ? 'border-[#C77DFF] shadow-[0px_4px_10px_0px_rgba(199,125,255,0.24)] hover:bg-[#C77DFF]/40' : 'border-adam-blue shadow-[0px_4px_10px_0px_rgba(0,166,255,0.24)] hover:bg-adam-blue/40'}`
                 } mb-4`}
                 onClick={() => navigate('/')}
               >

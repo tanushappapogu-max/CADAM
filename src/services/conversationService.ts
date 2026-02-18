@@ -11,6 +11,7 @@ const defaultConversation: Conversation = {
   user_id: '',
   created_at: '',
   updated_at: '',
+  mode: 'engineering',
 };
 
 export function useConversation() {

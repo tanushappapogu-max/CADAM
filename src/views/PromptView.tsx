@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import { SelectedItemsContext } from '@/contexts/SelectedItemsContext';
 import { useSendContentMutation } from '@/services/messageService';
 import { generateConversationTitle } from '@/services/conversationService';
+import { useMode } from '@/contexts/ModeContext';
 
 export function PromptView() {
   const navigate = useNavigate();
@@ -18,6 +19,7 @@ export function PromptView() {
   const { user, isLoading } = useAuth();
   const { isSidebarOpen } = useOutletContext<{ isSidebarOpen: boolean }>();
   const queryClient = useQueryClient();
+  const { mode } = useMode();
 
   const [model, setModel] = useState<Model>('google/gemini-3-pro-preview');
   const [isLoaded, setIsLoaded] = useState(false);
@@ -70,6 +72,7 @@ export function PromptView() {
             id: newConversationId,
             user_id: user?.id ?? '',
             title: 'New Conversation',
+            mode,
           },
         ])
         .select()
@@ -161,7 +164,7 @@ export function PromptView() {
                     id: newConversationId,
                     user_id: user?.id ?? '',
                   }}
-                  placeholder="Start building with Adam..."
+                  placeholder={mode === 'architecture' ? 'Start building with Parametrix...' : 'Start building with Adam...'}
                   model={model}
                   setModel={setModel}
                   showPromptGenerator={true}
@@ -170,7 +173,7 @@ export function PromptView() {
               <div className="relative">
                 {isLoading && (
                   <div className="absolute left-0 right-0 top-0">
-                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-adam-blue border-t-transparent" />
+                    <div className={`h-5 w-5 animate-spin rounded-full border-2 border-t-transparent ${mode === 'architecture' ? 'border-[#C77DFF]' : 'border-adam-blue'}`} />
                   </div>
                 )}
               </div>

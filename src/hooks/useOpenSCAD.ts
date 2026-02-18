@@ -13,6 +13,7 @@ export function useOpenSCAD() {
   const [error, setError] = useState<OpenSCADError | Error | undefined>();
   const [isError, setIsError] = useState(false);
   const [output, setOutput] = useState<Blob | undefined>();
+  const [outputFileType, setOutputFileType] = useState<string>('stl');
   const workerRef = useRef<Worker | null>(null);
   // Track files written to the worker filesystem
   const writtenFilesRef = useRef<Set<string>>(new Set());
@@ -55,11 +56,14 @@ export function useOpenSCAD() {
         setIsError(true);
         setOutput(undefined);
       } else if (event.data.data?.output) {
-        const blob = new Blob([event.data.data.output], {
-          type:
-            event.data.data.fileType === 'stl' ? 'model/stl' : 'image/svg+xml',
-        });
+        const ft = event.data.data.fileType;
+        let mimeType = 'application/octet-stream';
+        if (ft === 'stl') mimeType = 'model/stl';
+        else if (ft === 'svg') mimeType = 'image/svg+xml';
+        else if (ft === 'off') mimeType = 'text/plain';
+        const blob = new Blob([event.data.data.output], { type: mimeType });
         setOutput(blob);
+        setOutputFileType(ft || 'stl');
       }
       setIsCompiling(false);
     }
@@ -143,20 +147,19 @@ export function useOpenSCAD() {
   }, []);
 
   const compileScad = useCallback(
-    async (code: string) => {
+    async (code: string, fileType: string = 'stl') => {
       setIsCompiling(true);
       setError(undefined);
       setIsError(false);
 
       const worker = getWorker();
-      // Note: Event listener is already added in useEffect, no need to add again
 
       const message: WorkerMessage = {
         type: WorkerMessageType.PREVIEW,
         data: {
           code,
           params: [],
-          fileType: 'stl',
+          fileType,
         },
       };
 
@@ -165,13 +168,56 @@ export function useOpenSCAD() {
     [getWorker],
   );
 
+  // Promise-based compilation for background component compilations.
+  // Uses request IDs so responses don't interfere with the main compile state.
+  const compileScadAsync = useCallback(
+    async (code: string, fileType: string = 'stl'): Promise<Blob | null> => {
+      const worker = getWorker();
+      const requestId = `async-compile-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+      const responsePromise = new Promise<Blob | null>((resolve) => {
+        pendingRequestsRef.current.set(requestId, {
+          resolve: (data: unknown) => {
+            const result = data as { output?: Uint8Array; fileType?: string } | null;
+            if (result?.output) {
+              const blob = new Blob([result.output], { type: 'model/stl' });
+              resolve(blob);
+            } else {
+              resolve(null);
+            }
+          },
+          reject: () => {
+            // Background compilations silently resolve to null on error
+            resolve(null);
+          },
+        });
+      });
+
+      const message: WorkerMessage & { id: string } = {
+        id: requestId,
+        type: WorkerMessageType.PREVIEW,
+        data: {
+          code,
+          params: [],
+          fileType,
+        },
+      };
+
+      worker.postMessage(message);
+      return responsePromise;
+    },
+    [getWorker],
+  );
+
   return {
     compileScad,
+    compileScadAsync,
     writeFile,
     unlinkFile,
     hasFile,
     isCompiling,
     output,
+    outputFileType,
     error,
     isError,
   };

@@ -17,6 +17,7 @@ import { ViewerSection } from '@/components/viewer/ViewerSection';
 import { ParameterSection } from '@/components/parameter/ParameterSection';
 import { useBlob } from '@/contexts/BlobContext';
 import { useColor } from '@/contexts/ColorContext';
+import { useMode } from '@/contexts/ModeContext';
 
 const PANEL_SIZES = {
   CHAT: {
@@ -40,6 +41,7 @@ export function ParametricEditor() {
   const { currentMessage, setCurrentMessage } = useCurrentMessage();
   const { setBlob } = useBlob();
   const { setColor } = useColor();
+  const { mode } = useMode();
   const [isParametersPanelCollapsed, setIsParametersPanelCollapsed] =
     useState(false);
   const [isChatCollapsed, setIsChatCollapsed] = useState(false);
@@ -78,8 +80,8 @@ export function ParametricEditor() {
   useEffect(() => {
     setCurrentMessage(null);
     setBlob(null);
-    setColor('#00A6FF');
-  }, [conversation.id, setCurrentMessage, setBlob, setColor]);
+    setColor(mode === 'architecture' ? '#C77DFF' : '#00A6FF');
+  }, [conversation.id, setCurrentMessage, setBlob, setColor, mode]);
 
   useEffect(() => {
     if (lastMessage?.role === 'assistant') {

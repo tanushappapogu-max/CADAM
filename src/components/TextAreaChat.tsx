@@ -34,6 +34,7 @@ import { useItemSelection } from '@/hooks/useItemSelection';
 import { AnimatePresence, motion } from 'framer-motion';
 import { processSTL, isValidSTL } from '@/utils/meshUtils';
 import { MeshFilesContext } from '@/contexts/MeshFilesContext';
+import { useMode } from '@/contexts/ModeContext';
 
 interface TextAreaChatProps {
   onSubmit: (content: Content) => void;
@@ -77,6 +78,7 @@ function TextAreaChat({
   const { images, setImages, meshUpload, setMeshUpload } = useItemSelection();
   // MeshFilesContext is optional (only available in EditorView)
   const meshFilesContext = useContext(MeshFilesContext);
+  const { mode } = useMode();
 
   // Check if current model supports thinking
   const selectedModelConfig = PARAMETRIC_MODELS.find((m) => m.id === model);
@@ -804,7 +806,9 @@ function TextAreaChat({
         className={cn(
           'relative rounded-2xl border-2',
           isFocused
-            ? 'border-adam-blue shadow-[inset_0px_0px_8px_0px_rgba(0,0,0,0.08)]'
+            ? mode === 'architecture'
+              ? 'border-[#C77DFF] shadow-[inset_0px_0px_8px_0px_rgba(0,0,0,0.08)]'
+              : 'border-adam-blue shadow-[inset_0px_0px_8px_0px_rgba(0,0,0,0.08)]'
             : 'border-adam-neutral-700 shadow-[inset_0px_0px_8px_0px_rgba(0,0,0,0.08)] hover:border-adam-neutral-400',
           'bg-adam-background-2 transition-all duration-300',
         )}
@@ -831,10 +835,13 @@ function TextAreaChat({
       >
         <div className="flex select-none items-center justify-between p-2">
           <Avatar className="h-8 w-8">
-            <div className="h-full w-full p-1.5">
+            <div className={`h-full w-full ${mode === 'architecture' ? 'p-0.5' : 'p-1.5'}`}>
               <img
-                src={`${import.meta.env.BASE_URL}/Adam-Logo.png`}
-                alt="Adam Logo"
+                src={mode === 'architecture'
+                  ? `${import.meta.env.BASE_URL}/logos/Screenshot 2026-02-16 at 10.57.01 PM.svg`
+                  : `${import.meta.env.BASE_URL}/Adam-Logo.png`
+                }
+                alt={mode === 'architecture' ? 'Parametrix' : 'Adam Logo'}
                 className="h-full w-full object-contain"
               />
             </div>
@@ -945,7 +952,7 @@ function TextAreaChat({
                 handleSubmit();
               }}
               className={cn(
-                'flex h-8 w-8 transform items-center justify-center rounded-lg bg-adam-neutral-700 p-1 text-white transition-all duration-300 hover:scale-105 hover:bg-adam-blue/90 disabled:opacity-50 disabled:hover:scale-100 disabled:hover:bg-adam-blue',
+                `flex h-8 w-8 transform items-center justify-center rounded-lg bg-adam-neutral-700 p-1 text-white transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:hover:scale-100 ${mode === 'architecture' ? 'hover:bg-[#C77DFF]/90 disabled:hover:bg-[#C77DFF]' : 'hover:bg-adam-blue/90 disabled:hover:bg-adam-blue'}`,
                 (images.some((img) => img.isUploading) ||
                   meshUpload?.isProcessing) &&
                   'opacity-50',

@@ -8,6 +8,7 @@ import {
 } from '@/utils/parameterUtils';
 import { ParameterSlider } from '@/components/parameter/ParameterSlider';
 import { Label } from '@/components/ui/label';
+import { useMode } from '@/contexts/ModeContext';
 
 export function ParameterInput({
   param,
@@ -16,6 +17,10 @@ export function ParameterInput({
   param: Parameter;
   handleCommit: (param: Parameter, value: Parameter['value']) => void;
 }) {
+  const { mode } = useMode();
+  const isArch = mode === 'architecture';
+  const sliderColor = isArch ? 'purple' as const : 'blue' as const;
+  const unitLabel = isArch ? 'ft' : 'mm';
   const [paramState, setParamState] = useState<Parameter>(param);
 
   useEffect(() => {
@@ -51,6 +56,7 @@ export function ParameterInput({
             param={paramState}
             onValueChange={handleValueChange}
             onValueCommit={handleValueCommit}
+            colorScheme={sliderColor}
           />
           <div className="flex flex-shrink-0 items-center gap-2">
             <Input
@@ -69,7 +75,7 @@ export function ParameterInput({
               }}
             />
             <span className="ml-1 w-6 text-left text-xs text-adam-neutral-300">
-              {isMeasurementParameter(paramState) ? 'mm' : ''}
+              {isMeasurementParameter(paramState) ? unitLabel : ''}
             </span>
           </div>
         </div>
@@ -185,6 +191,7 @@ export function ParameterInput({
                 <div key={index} className="flex w-full items-center gap-3">
                   <ParameterSlider
                     param={itemParam}
+                    colorScheme={sliderColor}
                     onValueChange={(newValue) =>
                       handleValueChange(
                         (paramState.value as number[]).map(
@@ -237,7 +244,7 @@ export function ParameterInput({
                       }}
                     />
                     <span className="w-6 text-left text-xs text-adam-neutral-300">
-                      {isMeasurementParameter(paramState) ? 'mm' : ''}
+                      {isMeasurementParameter(paramState) ? unitLabel : ''}
                     </span>
                   </div>
                 </div>

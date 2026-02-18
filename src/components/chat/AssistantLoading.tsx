@@ -1,14 +1,28 @@
 import { Avatar, AvatarImage } from '@/components/ui/avatar';
 import { AnimatedEllipsis } from '@/components/chat/AnimatedEllipsis';
+import { useMode } from '@/contexts/ModeContext';
 
 export function AssistantLoading() {
+  const { mode } = useMode();
   return (
     <div className="flex w-full p-1">
       <div className="mr-2 mt-1">
-        <Avatar className="h-9 w-9 border border-adam-neutral-700 bg-adam-neutral-950 p-1.5">
+        <Avatar
+          className="h-9 w-9 border bg-adam-neutral-950"
+          style={
+            mode === "architecture"
+              ? { borderColor: "#C77DFF", padding: "0.15rem" }
+              : { borderColor: undefined, padding: "0.375rem" }
+          }
+        >
           <AvatarImage
-            src={`${import.meta.env.BASE_URL}/adam-logo.svg`}
-            alt="Adam"
+            src={
+              mode === "architecture"
+                ? `${import.meta.env.BASE_URL}/logos/Screenshot 2026-02-16 at 10.57.01 PM.svg`
+                : `${import.meta.env.BASE_URL}/adam-logo.svg`
+            }
+            alt={mode === "architecture" ? "Parametrix" : "Adam"}
+            className={mode === "architecture" ? "rounded-sm object-contain" : ""}
           />
         </Avatar>
       </div>

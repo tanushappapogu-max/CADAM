@@ -32,6 +32,7 @@ import {
   useRetryMessageMutation,
   useIsLoading,
 } from '@/services/messageService';
+import { useMode } from '@/contexts/ModeContext';
 
 interface AssistantMessageProps {
   message: TreeNode<Message>;
@@ -47,6 +48,7 @@ export function AssistantMessage({
   const { mutate: restoreMessage } = useRestoreMessageMutation();
   const { mutate: retryMessage } = useRetryMessageMutation();
   const isLoading = useIsLoading();
+  const { mode } = useMode();
   const model = message.content.model ?? 'anthropic/claude-sonnet-4.5';
 
   const changeLeaf = useCallback(
@@ -83,11 +85,23 @@ export function AssistantMessage({
     <div className="flex justify-start">
       {message.role === 'assistant' && (
         <div className="mr-2 mt-1">
-          <Avatar className="h-9 w-9 border border-adam-neutral-700 bg-adam-neutral-950">
-            <div style={{ padding: '0.6rem 0.5rem 0.5rem 0.55rem' }}>
+          <Avatar
+            className="h-9 w-9 border bg-adam-neutral-950"
+            style={
+              mode === "architecture"
+                ? { borderColor: "#C77DFF" }
+                : undefined
+            }
+          >
+            <div style={{ padding: mode === "architecture" ? "0.15rem" : "0.6rem 0.5rem 0.5rem 0.55rem" }}>
               <AvatarImage
-                src={`${import.meta.env.BASE_URL}/adam-logo.svg`}
-                alt="Adam"
+                src={
+                  mode === "architecture"
+                    ? `${import.meta.env.BASE_URL}/logos/Screenshot 2026-02-16 at 10.57.01 PM.svg`
+                    : `${import.meta.env.BASE_URL}/adam-logo.svg`
+                }
+                alt={mode === "architecture" ? "Parametrix" : "Adam"}
+                className={mode === "architecture" ? "rounded-sm object-contain" : ""}
               />
             </div>
           </Avatar>
@@ -252,7 +266,8 @@ function ObjectButton({
   currentVersion: number;
 }) {
   const [isHovered, setIsHovered] = useState(false);
-  let title = 'Adam Object';
+  const { mode } = useMode();
+  let title = mode === 'architecture' ? 'Parametrix Object' : 'Adam Object';
   if (message.content.artifact) {
     title = message.content.artifact.title;
   }
@@ -265,7 +280,7 @@ function ObjectButton({
       className={cn(
         'group relative bg-black p-2 hover:bg-adam-bg-dark',
         currentMessage && currentMessage.id === message.id
-          ? 'border-adam-blue'
+          ? mode === 'architecture' ? 'border-[#C77DFF]' : 'border-adam-blue'
           : 'border-gray-200/20 dark:border-gray-700',
       )}
       onClick={() => setCurrentMessage(message)}

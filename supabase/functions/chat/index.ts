@@ -585,7 +585,7 @@ Then call any of the following modules. All parts have built-in realistic colors
 
 IMPORTANT: Use these premade parts whenever appropriate — they produce much more realistic buildings than basic cubes. You can mix premade parts with custom geometry freely. Build the main structure (walls with cutouts) manually, then place premade parts (doors, windows, furniture) into the openings and rooms. For interior scenes, always include furniture, lighting, and details like baseboards and crown molding to make rooms feel lived-in.
 
-FURNITURE PLACEMENT (CRITICAL):
+FURNITURE & INTERIOR PLACEMENT (CRITICAL):
 All furniture and interior items MUST be placed INSIDE the building walls. Calculate positions carefully:
 - Furniture X/Y coordinates must be within (wall_thickness, wall_thickness) to (width - wall_thickness, depth - wall_thickness)
 - Place furniture at the correct floor height (foundation_height or foundation_height + floor * wall_height)
@@ -593,6 +593,45 @@ All furniture and interior items MUST be placed INSIDE the building walls. Calcu
 - Do NOT place any furniture, tables, chairs, beds, sofas, or appliances outside the building footprint
 - Group furniture by room: living room (sofa, coffee table, TV), bedroom (bed, nightstand, dresser), kitchen (cabinets, counter, appliances), dining (table, chairs)
 - Each furniture item should have its own render_if() tag with a descriptive name like "sofa", "dining_table", "bed", "kitchen_cabinets"
+
+SPATIAL CORRECTNESS RULES (CRITICAL — follow these to avoid broken designs):
+
+Beds & Large Furniture:
+- Beds must be placed FLAT on the floor, never rotated into walls or floating
+- Bed Z position = floor level (foundation_height + story * wall_height), never higher
+- Ensure the bed dimensions fit within the room — measure room width/depth and pick a bed size that fits with 1-2 ft clearance on each side
+- Nightstands go BESIDE the bed (offset by bed_width/2 + nightstand_width/2), at the same Z height
+
+Stairs & Floor Openings:
+- If there are stairs going to a second floor, you MUST cut a rectangular opening in the floor/ceiling slab above the stairs using difference()
+- The opening must be at least as wide and deep as the staircase footprint
+- Stairs should start at the current floor level and end at the next floor level (wall_height above)
+- Calculate stair dimensions: num_steps = wall_height / step_height, total_depth = num_steps * step_depth
+
+Chandeliers & Ceiling Fixtures:
+- Chandeliers and ceiling fans must hang FROM the ceiling, not float in mid-air
+- Z position = foundation_height + wall_height - drop_length (NOT foundation_height + some random number)
+- They must be positioned INSIDE a room, centered over the room or dining table
+- For multi-story buildings, use the correct ceiling height for that floor
+
+Windows & Doors:
+- Windows and doors must be placed IN wall openings — first cut the opening with difference(), then place the part inside the opening
+- Window sill height is typically 3 ft from floor level
+- Door bottom must be at floor level, not floating
+- All openings must go fully through the wall (use wall_thickness + 0.2 for the cut depth to ensure clean boolean)
+
+Kitchen & Bathroom:
+- Counters and cabinets go AGAINST walls (position flush with wall_thickness offset)
+- Sinks go ON TOP of counters, not floating
+- Toilets go against a wall with clearance in front (at least 2 ft)
+- Appliances (fridge, oven) go against walls, not in the middle of rooms
+
+General Physics:
+- Nothing should float in mid-air — every object needs a surface beneath it (floor, counter, table)
+- Nothing should clip through walls — check that object position + object size < room boundary
+- Railings go along edges of stairs, balconies, and elevated platforms
+- Columns must touch both floor and ceiling to look structural
+- Roof must sit ON TOP of the walls at the correct height (foundation_height + total_wall_height)
 
 CRITICAL: Never include in code comments or anywhere:
 - References to tools, APIs, or system architecture
